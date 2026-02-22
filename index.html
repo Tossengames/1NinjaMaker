@@ -154,6 +154,8 @@
       <div class="ctrl-item"><span class="ctrl-key">K / ■</span> — Block (hold)</div>
       <div class="ctrl-item"><span class="ctrl-key">Near enemy</span> — Stealth kill</div>
       <div class="ctrl-item"><span class="ctrl-key">Shift</span> — Crouch / sneak</div>
+      <div class="ctrl-item"><span class="ctrl-key">V / CAM btn</span> — Cycle camera</div>
+      <div class="ctrl-item"><span class="ctrl-key">Scroll / Pinch</span> — Zoom in/out</div>
       <div class="ctrl-item"><span class="ctrl-key">ESC / ⏸</span> — Pause</div>
     </div>
     <button class="menu-btn" id="btn-start-mission">Begin Mission</button>
@@ -201,6 +203,7 @@
     <div id="kills-display">Kills: 0 / 4</div>
     <div id="objective">⬧ Eliminate Lord Hayamoto</div>
     <button id="pause-btn" style="pointer-events:all">❙❙</button>
+    <button id="cam-btn" style="pointer-events:all;position:absolute;top:14px;left:calc(50% + 46px);width:36px;height:36px;background:rgba(0,0,0,0.5);border:1px solid #e8c97e44;border-radius:50%;color:#e8c97e;font-size:9px;letter-spacing:1px;cursor:pointer;font-family:serif;">CAM</button>
     <div id="stealth-prompt">⬧ STEALTH KILL ⬧<br><span style="font-size:10px;letter-spacing:2px">Press Attack</span></div>
     <div id="alert-flash"></div>
   </div>
@@ -256,6 +259,9 @@ const NM = {
   // ── Camera ─────────────────────────────────────────────────
   camYaw: 0, camPitch: 0.3,
   camDist: 6, camTarget: new THREE.Vector3(),
+  camMode: 1,   // 0=close  1=medium  2=far  3=FPS
+  // cam presets: [dist, pitch, fov]
+  CAM_PRESETS: [ [3.5, 0.22, 70], [6, 0.3, 65], [11, 0.38, 58], [0, 0.05, 80] ],
 
   // ── Entities ───────────────────────────────────────────────
   player: null, enemies: [], particles: [], projectiles: [],
@@ -378,6 +384,7 @@ function bindMenuButtons() {
   document.getElementById('btn-resume').onclick = () => resumeGame();
   document.getElementById('btn-quit').onclick = () => quitToMenu();
   document.getElementById('pause-btn').onclick = () => pauseGame();
+  document.getElementById('cam-btn').onclick = () => cycleCamMode();
   document.getElementById('btn-result-menu').onclick = () => quitToMenu();
 }
 
@@ -699,95 +706,162 @@ function buildCharacter(options = {}) {
   const {
     bodyColor = 0x1a1a1a, headColor = 0x1a1a1a,
     eyeColor = 0xff3333, scarf = false, scarfColor = 0xff0000,
-    scale = 1, isBoss = false
+    scale = 1, isBoss = false, isPlayer = false
   } = options;
 
   const group = new THREE.Group();
 
-  const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
-  const headMat = new THREE.MeshLambertMaterial({ color: headColor });
-  const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
-  const swordMat = new THREE.MeshLambertMaterial({ color: 0xaaaacc, emissive: 0x222244, emissiveIntensity:0.3 });
+  const bodyMat  = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const headMat  = new THREE.MeshLambertMaterial({ color: headColor });
+  const eyeMat   = new THREE.MeshBasicMaterial({ color: eyeColor });
+  const skinMat  = new THREE.MeshLambertMaterial({ color: 0xc8946a });
+  const swordMat = new THREE.MeshLambertMaterial({ color: 0xdde8ff, emissive: 0x3344aa, emissiveIntensity: 0.4 });
 
-  // Torso
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(isBoss?0.8:0.55, isBoss?1.0:0.8, 0.35), bodyMat);
-  torso.position.y = isBoss ? 1.0 : 0.85;
+  const W = isBoss ? 1.0 : 0.65;   // torso width
+  const TH = isBoss ? 1.1 : 0.9;   // torso height
+
+  // ── Torso ──
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(W, TH, 0.4), bodyMat);
+  torso.position.y = isBoss ? 1.05 : 0.9;
   group.add(torso);
 
-  // Head
-  const head = new THREE.Mesh(new THREE.BoxGeometry(isBoss?0.6:0.45, isBoss?0.55:0.45, 0.45), headMat);
-  head.position.y = isBoss ? 1.85 : 1.5;
+  // ── Head ──
+  const headW = isBoss ? 0.65 : 0.5;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(headW, headW * 0.95, 0.5), headMat);
+  head.position.y = isBoss ? 1.95 : 1.65;
   group.add(head);
+  group._head = head;
 
-  // Eyes
-  [-0.1, 0.1].forEach(ox => {
-    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.05), eyeMat);
-    eye.position.set(ox, isBoss?1.87:1.52, 0.24);
+  // ── Eyes ──
+  [-0.12, 0.12].forEach(ox => {
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.05), eyeMat);
+    eye.position.set(ox, head.position.y + 0.02, 0.26);
     group.add(eye);
   });
 
-  // Legs
-  [-0.15, 0.15].forEach((ox, i) => {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, isBoss?0.85:0.75, 0.22), bodyMat);
-    leg.position.set(ox, isBoss?0.42:0.37, 0);
-    group._legs = group._legs || [];
+  // ── Player: white hair ──
+  if (isPlayer) {
+    const hairMat = new THREE.MeshLambertMaterial({ color: 0xf0f0f0 });
+    // Top hair chunk
+    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.18, 0.55), hairMat);
+    hair.position.set(0, head.position.y + headW*0.5 - 0.01, 0);
+    group.add(hair);
+    // Side tufts
+    const tuftL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.35, 0.4), hairMat);
+    tuftL.position.set(-0.27, head.position.y + 0.1, 0.02);
+    group.add(tuftL);
+    const tuftR = tuftL.clone(); tuftR.position.x = 0.27;
+    group.add(tuftR);
+    // Back hair (longer)
+    const backHair = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.12), hairMat);
+    backHair.position.set(0, head.position.y - 0.05, -0.3);
+    group.add(backHair);
+  }
+
+  // ── Legs ──
+  group._legs = [];
+  const legH = isBoss ? 0.9 : 0.8;
+  [-0.18, 0.18].forEach(ox => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.24, legH, 0.24), bodyMat);
+    leg.position.set(ox, legH * 0.5 - 0.05, 0);
     group._legs.push(leg);
+
+    // Foot
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.12, 0.3), bodyMat);
+    foot.position.set(ox, 0.04, 0.05);
+    group.add(foot);
     group.add(leg);
   });
 
-  // Arms
-  [-0.42, 0.42].forEach((ox, i) => {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.18, isBoss?0.85:0.7, 0.18), bodyMat);
-    arm.position.set(isBoss?ox*1.2:ox, isBoss?0.95:0.82, 0);
-    group._arms = group._arms || [];
-    group._arms.push(arm);
-    group.add(arm);
+  // ── Arms ──
+  group._arms = [];
+  const armH = isBoss ? 0.9 : 0.78;
+  const armOx = isBoss ? 0.62 : 0.47;
+  [-armOx, armOx].forEach((ox, i) => {
+    // Pivot group at shoulder
+    const pivot = new THREE.Group();
+    pivot.position.set(ox, isBoss ? 1.45 : 1.26, 0);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, armH, 0.2), bodyMat);
+    arm.position.y = -armH * 0.5;
+    pivot.add(arm);
+    group._arms.push(pivot);
+    group.add(pivot);
   });
 
-  // Scarf / sash
+  // ── Scarf / sash ──
   if (scarf) {
     const scarfMat = new THREE.MeshLambertMaterial({ color: scarfColor });
-    const s1 = new THREE.Mesh(new THREE.BoxGeometry(isBoss?0.85:0.6, 0.15, 0.38), scarfMat);
-    s1.position.y = isBoss ? 1.45 : 1.15;
+    const s1 = new THREE.Mesh(new THREE.BoxGeometry(W + 0.06, 0.16, 0.44), scarfMat);
+    s1.position.y = isBoss ? 1.5 : 1.28;
     group.add(s1);
-    const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.1, isBoss?0.6:0.5, 0.08), scarfMat);
-    s2.position.set(0, isBoss?0.85:0.7, 0.2);
+    // Tail
+    const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.55, 0.1), scarfMat);
+    s2.position.set(0, isBoss ? 0.85 : 0.75, 0.22);
     group.add(s2);
   }
 
-  // Sword
-  const sword = new THREE.Group();
-  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.06, isBoss?1.2:0.9, 0.04), swordMat);
-  blade.position.y = isBoss ? 0.6 : 0.45;
-  sword.add(blade);
-  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.08), new THREE.MeshLambertMaterial({color:0x8a6a1a}));
-  guard.position.y = 0.05;
-  sword.add(guard);
-  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.25, 0.07), new THREE.MeshLambertMaterial({color:0x3a1a0a}));
-  handle.position.y = -0.12;
-  sword.add(handle);
-  sword.position.set(isBoss?0.5:0.38, isBoss?0.9:0.7, 0);
-  sword.rotation.z = -0.2;
-  group._sword = sword;
-  group.add(sword);
+  // ── Player: red neck band ──
+  if (isPlayer) {
+    const bandMat = new THREE.MeshLambertMaterial({ color: 0xcc1111, emissive: 0x440000, emissiveIntensity: 0.5 });
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.46), bandMat);
+    band.position.set(0, head.position.y - headW * 0.52, 0);
+    group.add(band);
+  }
 
+  // ── Sword (much bigger, mounted on right arm pivot) ──
+  const sword = new THREE.Group();
+  const bladeLen = isBoss ? 1.8 : 1.4;
+  // Blade
+  const blade = new THREE.Mesh(
+    new THREE.BoxGeometry(0.07, bladeLen, 0.05),
+    swordMat
+  );
+  blade.position.y = bladeLen * 0.5 + 0.15;
+  sword.add(blade);
+
+  // Blade edge highlight
+  const edgeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.01, bladeLen, 0.02), edgeMat);
+  edge.position.set(0.03, bladeLen*0.5+0.15, 0.03);
+  sword.add(edge);
+
+  // Guard
+  const guard = new THREE.Mesh(
+    new THREE.BoxGeometry(0.3, 0.07, 0.1),
+    new THREE.MeshLambertMaterial({ color: 0xaa8822 })
+  );
+  guard.position.y = 0.12;
+  sword.add(guard);
+
+  // Handle
+  const handle = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.3, 0.08),
+    new THREE.MeshLambertMaterial({ color: 0x3a1a0a })
+  );
+  handle.position.y = -0.08;
+  sword.add(handle);
+
+  // Mount sword on right-arm pivot (index 1), offset outward and downward
+  const rightArm = group._arms[1];
+  sword.position.set(0.12, -0.1, 0);
+  sword.rotation.z = -0.15;
+  rightArm.add(sword);
+  group._sword = sword;
+  group._swordArm = rightArm;   // pivot to swing for attack anim
+
+  // ── Boss extras ──
   if (isBoss) {
-    // Boss armor plates
-    const armorMat = new THREE.MeshLambertMaterial({ color: 0x1a0a0a, emissive:0x220000, emissiveIntensity:0.2 });
-    const shoulder1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.35), armorMat);
-    shoulder1.position.set(-0.6, 1.3, 0); group.add(shoulder1);
-    const shoulder2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.35), armorMat);
-    shoulder2.position.set(0.6, 1.3, 0); group.add(shoulder2);
-    // Helmet crest
-    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.1), armorMat);
-    crest.position.set(0, 2.2, 0); group.add(crest);
+    const armorMat = new THREE.MeshLambertMaterial({ color: 0x1a0808, emissive:0x220000, emissiveIntensity:0.3 });
+    [[-0.72, 1.5],[ 0.72, 1.5]].forEach(([ox, oy]) => {
+      const sh = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.28, 0.38), armorMat);
+      sh.position.set(ox, oy, 0); group.add(sh);
+    });
+    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.55, 0.12), armorMat);
+    crest.position.set(0, 2.38, 0); group.add(crest);
   }
 
   group.scale.setScalar(scale);
-  group.castShadow = true;
-
-  // Shadow
-  group.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = false; } });
+  group.traverse(m => { if (m.isMesh) { m.castShadow = true; } });
 
   return group;
 }
@@ -796,7 +870,15 @@ function buildCharacter(options = {}) {
 //  PLAYER
 // ══════════════════════════════════════════════════════════════
 function spawnPlayer() {
-  const mesh = buildCharacter({ bodyColor: 0x0a0a12, headColor: 0x0a0a12, eyeColor: 0x4488ff, scarf: true, scarfColor: 0x0022cc, scale: 1 });
+  const mesh = buildCharacter({
+    bodyColor:  0x0d0d1a,
+    headColor:  0x0d0d1a,
+    eyeColor:   0x44aaff,
+    scarf:      true,
+    scarfColor: 0x0022cc,
+    isPlayer:   true,     // triggers white hair + red neck band
+    scale:      1
+  });
   mesh.position.set(0, 0, 8);
 
   NM.player = {
@@ -949,20 +1031,22 @@ function updatePlayer(dt) {
   }
 
   // ── Movement ──
-  const camDir = new THREE.Vector3(-Math.sin(NM.camYaw), 0, -Math.cos(NM.camYaw)).normalize();
-  const camRight = new THREE.Vector3(Math.cos(NM.camYaw), 0, -Math.sin(NM.camYaw)).normalize();
+  // Camera-relative movement vectors (flat, ignore pitch)
+  // camFwd = direction camera is LOOKING projected onto XZ plane
+  const camFwd  = new THREE.Vector3( Math.sin(NM.camYaw), 0,  Math.cos(NM.camYaw)).normalize();
+  const camRight = new THREE.Vector3( Math.cos(NM.camYaw), 0, -Math.sin(NM.camYaw)).normalize();
 
   let moveX = 0, moveZ = 0;
-  // Keyboard
-  if (NM.keys['w'] || NM.keys['arrowup']) { moveX += camDir.x; moveZ += camDir.z; }
-  if (NM.keys['s'] || NM.keys['arrowdown']) { moveX -= camDir.x; moveZ -= camDir.z; }
-  if (NM.keys['a'] || NM.keys['arrowleft']) { moveX -= camRight.x; moveZ -= camRight.z; }
+  // Keyboard — W moves TOWARD camera look target (into screen)
+  if (NM.keys['w'] || NM.keys['arrowup'])    { moveX += camFwd.x;  moveZ += camFwd.z;  }
+  if (NM.keys['s'] || NM.keys['arrowdown'])  { moveX -= camFwd.x;  moveZ -= camFwd.z;  }
+  if (NM.keys['a'] || NM.keys['arrowleft'])  { moveX -= camRight.x; moveZ -= camRight.z; }
   if (NM.keys['d'] || NM.keys['arrowright']) { moveX += camRight.x; moveZ += camRight.z; }
-  // Joystick
+  // Joystick — jz negative = stick up = move forward (away from player toward camera target)
   if (NM.joystick.active) {
     const jx = NM.joystick.dx, jz = NM.joystick.dy;
-    moveX += camDir.x*(-jz) + camRight.x*jx;
-    moveZ += camDir.z*(-jz) + camRight.z*jx;
+    moveX += camFwd.x * (-jz) + camRight.x * jx;
+    moveZ += camFwd.z * (-jz) + camRight.z * jx;
   }
 
   P.isCrouching = NM.keys['shift'];
@@ -1036,14 +1120,33 @@ function updatePlayer(dt) {
   // ── Attack animation ──
   if (P.isAttacking) {
     P.attackTimer -= dt;
-    const prog = 1 - P.attackTimer / 0.35;
-    // Sword swing
-    if (P._sword) {
-      P._sword.rotation.z = -Math.PI*0.6 * Math.sin(prog * Math.PI);
+    const total = 0.42;
+    const prog = 1 - P.attackTimer / total;
+    const swingArm = P.mesh._swordArm;
+    if (swingArm) {
+      if (prog < 0.25) {
+        // Wind-up: raise arm back
+        const t = prog / 0.25;
+        swingArm.rotation.x = lerp(0, -2.2, t);
+        swingArm.rotation.z = lerp(0, -0.3, t);
+      } else {
+        // Slash forward + down — fast
+        const t = (prog - 0.25) / 0.75;
+        const ease = 1 - Math.pow(1-t, 2);
+        swingArm.rotation.x = lerp(-2.2, 1.6, ease);
+        swingArm.rotation.z = lerp(-0.3, 0.2, ease);
+      }
+    }
+    // Body lean forward on swing
+    if (P.mesh._head) {
+      P.mesh._head.rotation.x = prog > 0.25 ? lerp(0, 0.3, (prog-0.25)/0.75) : 0;
     }
     if (P.attackTimer <= 0) {
       P.isAttacking = false;
       P.attackCooldown = 0.15;
+      // Reset arm
+      if (swingArm) { swingArm.rotation.x = 0; swingArm.rotation.z = 0; }
+      if (P.mesh._head) P.mesh._head.rotation.x = 0;
     }
   }
 
@@ -1319,6 +1422,16 @@ function doEnemyAttack(e) {
   e.attackTimer = 0.4;
   e.attackCooldown = e.isBoss ? 1.2 : 1.8;
 
+  // Arm swing anim on enemy
+  const swingArm = e.mesh._swordArm;
+  if (swingArm) {
+    swingArm.rotation.x = -2.0;
+    setTimeout(() => {
+      if (swingArm) { swingArm.rotation.x = 1.4; }
+      setTimeout(() => { if (swingArm) { swingArm.rotation.x = 0; } }, 250);
+    }, 150);
+  }
+
   const P = NM.player;
   const dist = e.mesh.position.distanceTo(P.mesh.position);
 
@@ -1436,46 +1549,46 @@ function animateCharacter(c, dt, isMoving) {
   if (!mesh) return;
 
   const t = c.animTime;
-  const walkSpeed = isMoving ? 8 : 0;
+  const walkSpeed = 8;
+  const walkAmt = isMoving ? 1 : 0;
 
-  // Leg swing
+  // ── Leg swing ──
   if (mesh._legs) {
-    mesh._legs[0].rotation.x = isMoving ? Math.sin(t*walkSpeed)*0.5 : 0;
-    mesh._legs[1].rotation.x = isMoving ? -Math.sin(t*walkSpeed)*0.5 : 0;
+    mesh._legs[0].rotation.x = lerp(mesh._legs[0].rotation.x, walkAmt * Math.sin(t * walkSpeed) * 0.55, 0.25);
+    mesh._legs[1].rotation.x = lerp(mesh._legs[1].rotation.x, walkAmt * -Math.sin(t * walkSpeed) * 0.55, 0.25);
   }
 
-  // Arm swing / attack
-  if (mesh._arms) {
-    if (c.isAttacking) {
-      const prog = 1 - c.attackTimer / 0.35;
-      mesh._arms[0].rotation.x = -Math.sin(prog*Math.PI)*1.5;
-      mesh._arms[1].rotation.x = Math.sin(prog*Math.PI)*0.5;
-    } else {
-      mesh._arms[0].rotation.x = isMoving ? -Math.sin(t*walkSpeed)*0.4 : 0;
-      mesh._arms[1].rotation.x = isMoving ? Math.sin(t*walkSpeed)*0.4 : 0;
-    }
-    // Block
+  // ── Arm swing — only when not attacking ──
+  if (mesh._arms && !c.isAttacking) {
+    const leftArm  = mesh._arms[0];
+    const rightArm = mesh._arms[1];
+
     if (c.isBlocking) {
-      mesh._arms[0].rotation.x = -1.2;
-      mesh._arms[1].rotation.x = -1.0;
-      mesh._arms[0].rotation.z = 0.4;
-      mesh._arms[1].rotation.z = -0.4;
+      // Both arms raised forward
+      leftArm.rotation.x  = lerp(leftArm.rotation.x,  -1.1, 0.18);
+      rightArm.rotation.x = lerp(rightArm.rotation.x, -1.1, 0.18);
+      leftArm.rotation.z  = lerp(leftArm.rotation.z,   0.5, 0.18);
+      rightArm.rotation.z = lerp(rightArm.rotation.z, -0.5, 0.18);
+    } else {
+      // Natural swing
+      leftArm.rotation.x  = lerp(leftArm.rotation.x,  walkAmt * -Math.sin(t * walkSpeed) * 0.45, 0.2);
+      rightArm.rotation.x = lerp(rightArm.rotation.x, walkAmt *  Math.sin(t * walkSpeed) * 0.45, 0.2);
+      leftArm.rotation.z  = lerp(leftArm.rotation.z,  0, 0.15);
+      rightArm.rotation.z = lerp(rightArm.rotation.z, 0, 0.15);
     }
   }
 
-  // Body bob
-  const children = mesh.children;
-  children.forEach(child => {
-    if (child.geometry && child.geometry.parameters && child.geometry.parameters.width > 0.4) {
-      child.position.y += Math.sin(t*walkSpeed*2)*0.012*dt*60 * (isMoving ? 1 : 0.1);
-    }
-  });
+  // ── Body bob ──
+  if (isMoving) {
+    mesh.position.y = lerp(mesh.position.y || 0, Math.abs(Math.sin(t * walkSpeed * 2)) * 0.04, 0.3);
+  }
 
-  // Crouch
+  // ── Crouch ──
   if (c === NM.player && c.isCrouching) {
-    mesh.scale.y = lerp(mesh.scale.y, 0.7, 0.15);
+    mesh.scale.y = lerp(mesh.scale.y, 0.72, 0.14);
   } else {
-    mesh.scale.y = lerp(mesh.scale.y, c.isBoss ? 1.2 : 1.0, 0.15);
+    const targetScaleY = (c.isBoss ? 1.0 : 1.0); // scale already applied via group.scale
+    mesh.scale.y = lerp(mesh.scale.y, targetScaleY, 0.14);
   }
 }
 
@@ -1485,25 +1598,72 @@ function animateCharacter(c, dt, isMoving) {
 function updateCamera(dt) {
   if (!NM.player) return;
 
-  // Mouse delta
-  NM.camYaw -= NM.mouse.dx * 0.003;
-  NM.camPitch = clamp(NM.camPitch - NM.mouse.dy * 0.003, -0.1, 0.8);
-  NM.mouse.dx = 0; NM.mouse.dy = 0;
-
   const P = NM.player.mesh.position;
-  const target = new THREE.Vector3(P.x, P.y + 1.2, P.z);
-  NM.camTarget.lerp(target, 12*dt);
+  const preset = NM.CAM_PRESETS[NM.camMode];
+  const targetDist  = preset[0];
+  const targetPitch = preset[1];
+  const targetFov   = preset[2];
 
+  // Smooth yaw from mouse/touch drag
+  NM.camYaw   -= NM.mouse.dx * 0.003;
+  NM.camPitch  = clamp(NM.camPitch - NM.mouse.dy * 0.003, -0.08, 0.72);
+  NM.mouse.dx  = 0;
+  NM.mouse.dy  = 0;
+
+  // Smoothly blend pitch toward preset when not dragging
+  NM.camPitch = lerp(NM.camPitch, targetPitch, dt * 1.2);
+
+  // Smooth distance
+  NM.camDist = lerp(NM.camDist, targetDist, dt * 5);
+
+  // FOV transition
+  NM.camera.fov = lerp(NM.camera.fov, targetFov, dt * 6);
+  NM.camera.updateProjectionMatrix();
+
+  // FPS mode
+  if (NM.camMode === 3) {
+    // Place camera at head level, facing where player faces
+    const eyeY = P.y + 1.6;
+    NM.camTarget.set(P.x, eyeY, P.z);
+    NM.camera.position.lerp(new THREE.Vector3(P.x, eyeY, P.z), dt * 30);
+    const lookDir = new THREE.Vector3(
+      Math.sin(NM.camYaw),
+      -Math.sin(NM.camPitch),
+      Math.cos(NM.camYaw)
+    );
+    NM.camera.lookAt(P.x + lookDir.x*10, eyeY + lookDir.y*10, P.z + lookDir.z*10);
+    // Hide player mesh in FPS
+    NM.player.mesh.visible = false;
+    return;
+  }
+
+  // Show player in all other modes
+  if (NM.player.mesh) NM.player.mesh.visible = true;
+
+  // Follow target with offset
+  const followTarget = new THREE.Vector3(P.x, P.y + 1.3, P.z);
+  NM.camTarget.lerp(followTarget, dt * 12);
+
+  // Orbit position
   const camPos = new THREE.Vector3(
-    NM.camTarget.x - Math.sin(NM.camYaw)*Math.cos(NM.camPitch)*NM.camDist,
-    NM.camTarget.y + Math.sin(NM.camPitch)*NM.camDist,
-    NM.camTarget.z - Math.cos(NM.camYaw)*Math.cos(NM.camPitch)*NM.camDist
+    NM.camTarget.x - Math.sin(NM.camYaw) * Math.cos(NM.camPitch) * NM.camDist,
+    NM.camTarget.y + Math.sin(NM.camPitch) * NM.camDist + (NM.camMode === 0 ? 0.5 : 0),
+    NM.camTarget.z - Math.cos(NM.camYaw) * Math.cos(NM.camPitch) * NM.camDist
   );
-  // Clamp cam above ground
+
+  // Ground clamp
   if (camPos.y < 0.5) camPos.y = 0.5;
 
-  NM.camera.position.lerp(camPos, 14*dt);
+  NM.camera.position.lerp(camPos, dt * 12);
   NM.camera.lookAt(NM.camTarget);
+}
+
+function cycleCamMode() {
+  NM.camMode = (NM.camMode + 1) % 4;
+  const labels = ['CLOSE', 'MEDIUM', 'FAR', 'FPS'];
+  showNotif(labels[NM.camMode] + ' VIEW');
+  // Snap pitch toward preset immediately
+  NM.camPitch = NM.CAM_PRESETS[NM.camMode][1];
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1746,6 +1906,7 @@ function bindInput() {
     NM.keys[k] = true;
     if (k === 'j') NM.btnState.attackJustPressed = true;
     if (k === ' ') NM.btnState.jumpJustPressed = true;
+    if (k === 'v') cycleCamMode();
     if (k === 'escape') {
       if (NM.state === 'playing') pauseGame();
       else if (NM.state === 'paused') resumeGame();
@@ -1753,6 +1914,14 @@ function bindInput() {
     e.preventDefault();
   });
   document.addEventListener('keyup', e => { NM.keys[e.key.toLowerCase()] = false; });
+
+  // Scroll wheel — zoom in/out (adjusts camDist target via mode or direct)
+  document.addEventListener('wheel', e => {
+    if (NM.state !== 'playing') return;
+    if (NM.camMode === 3) return; // no scroll in FPS
+    NM.camDist = clamp(NM.camDist + e.deltaY * 0.01, 2, 14);
+    e.preventDefault();
+  }, { passive: false });
 
   // Mouse look
   document.addEventListener('mousedown', e => {
@@ -1793,6 +1962,26 @@ function bindInput() {
       if (camTouch && t.identifier === camTouch.id) camTouch = null;
     }
   }, { passive: true });
+
+  // Pinch zoom (two-finger)
+  let pinchDist = null;
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchDist = Math.sqrt(dx*dx + dy*dy);
+    }
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && pinchDist && NM.state === 'playing') {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newDist = Math.sqrt(dx*dx + dy*dy);
+      NM.camDist = clamp(NM.camDist - (newDist - pinchDist) * 0.04, 2, 14);
+      pinchDist = newDist;
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', () => { pinchDist = null; }, { passive: true });
 
   // Mobile buttons
   function mobileBtn(id, onDown, onUp) {

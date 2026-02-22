@@ -699,65 +699,58 @@ function buildStage2(M) {
 // ══════════════════════════════════════════════════════════════
 const CHAR_H=1.85, CHAR_R=0.30, STEP_H=0.52;
 
-function sweepPlayer(fromPos, toPos) {
-  // Returns {pos, onGround, hitX, hitZ}
-  const r=CHAR_R, R=NM.colliders;
-  let px=toPos.x, py=toPos.y, pz=toPos.z;
-  const prevY = fromPos.y;
-  let onGround=false, groundY=-Infinity, hitX=false, hitZ=false;
+function sweepPlayer(fromPos, toPos, yVel) {
+  const r = CHAR_R;
+  let px = toPos.x, py = toPos.y, pz = toPos.z;
+  let onGround = false, groundY = -Infinity;
 
-  for (const c of R) {
-    // Broad phase — skip completely clear colliders
-    if (px+r <= c.minX || px-r >= c.maxX) continue;
-    if (pz+r <= c.minZ || pz-r >= c.maxZ) continue;
-    if (py+CHAR_H <= c.minY || py >= c.maxY+0.1) continue;
+  for (const c of NM.colliders) {
+    // broad-phase XZ
+    if (px + r <= c.minX || px - r >= c.maxX) continue;
+    if (pz + r <= c.minZ || pz - r >= c.maxZ) continue;
+
+    // vertical broad-phase
+    if (py >= c.maxY + 0.02) continue;       // character is above — skip
+    if (py + CHAR_H <= c.minY) continue;     // character is below — skip
 
     const top = c.maxY;
 
-    // ── Land on top? ── prev feet >= surface-STEP, new feet <= surface
-    if (prevY >= top-STEP_H && py <= top+0.06) {
-      if (top > groundY) groundY=top;
-      onGround=true;
-      continue; // don't also do side push
+    // ── LANDING: feet were above surface, now at or below, AND we are falling ──
+    if (yVel <= 0 && fromPos.y >= top - 0.02 && py <= top + 0.12) {
+      if (top > groundY) groundY = top;
+      onGround = true;
+      continue; // landed on top, no side push needed
     }
 
-    // ── Side push — only if character is not landing on top ──
-    // Skip if top of collider is below feet (character is above it)
-    if (py >= top-0.1) continue;
+    // ── SIDE push: only when feet are clearly below the top surface ──
+    if (py > top - 0.2) continue; // near the top edge — don't push sideways
 
-    const penL=(px+r)-c.minX, penR=c.maxX-(px-r);
-    const penF=(pz+r)-c.minZ, penB=c.maxZ-(pz-r);
-    const minX=Math.min(penL,penR), minZ=Math.min(penF,penB);
+    const penL = (px + r) - c.minX;
+    const penR = c.maxX - (px - r);
+    const penF = (pz + r) - c.minZ;
+    const penB = c.maxZ - (pz - r);
 
-    if (minX < minZ) {
-      // Push on X axis — only if we were NOT already to the side last frame
-      const wasLeft  = fromPos.x+r <= c.minX+0.05;
-      const wasRight = fromPos.x-r >= c.maxX-0.05;
-      if (!wasLeft && !wasRight) {
-        // Actually overlapping — resolve
-        px = penL<penR ? c.minX-r : c.maxX+r;
-        hitX=true;
-      }
+    if (Math.min(penL, penR) < Math.min(penF, penB)) {
+      px = penL < penR ? c.minX - r : c.maxX + r;
     } else {
-      const wasFront = fromPos.z+r <= c.minZ+0.05;
-      const wasBack  = fromPos.z-r >= c.maxZ-0.05;
-      if (!wasFront && !wasBack) {
-        pz = penF<penB ? c.minZ-r : c.maxZ+r;
-        hitZ=true;
-      }
+      pz = penF < penB ? c.minZ - r : c.maxZ + r;
     }
   }
 
-  if (onGround && groundY > -Infinity) py=groundY;
-  if (py < 0) { py=0; onGround=true; }
+  // snap to ground
+  if (onGround && groundY > -Infinity) py = groundY;
 
-  const B=NM.levelBounds;
-  if (px-r < B.minX) { px=B.minX+r; hitX=true; }
-  if (px+r > B.maxX) { px=B.maxX-r; hitX=true; }
-  if (pz-r < B.minZ) { pz=B.minZ+r; hitZ=true; }
-  if (pz+r > B.maxZ) { pz=B.maxZ-r; hitZ=true; }
+  // hard floor
+  if (py < 0) { py = 0; onGround = true; }
 
-  return {pos:new THREE.Vector3(px,py,pz), onGround, hitX, hitZ};
+  // level boundary
+  const B = NM.levelBounds;
+  if (px - r < B.minX) px = B.minX + r;
+  if (px + r > B.maxX) px = B.maxX - r;
+  if (pz - r < B.minZ) pz = B.minZ + r;
+  if (pz + r > B.maxZ) pz = B.maxZ - r;
+
+  return { pos: new THREE.Vector3(px, py, pz), onGround };
 }
 
 function resolveEnemyCollision(pos, radius) {
@@ -976,130 +969,157 @@ function gameLoop() {
 //  PLAYER UPDATE — no wall jump, jump while moving, attack while moving
 // ══════════════════════════════════════════════════════════════
 function updatePlayer(dt) {
-  const P=NM.player;
-  if (!P||P.hp<=0) return;
+  const P = NM.player;
+  if (!P || P.hp <= 0) return;
 
-  P.animTime+=dt;
-  P.attackTimer   =Math.max(0,P.attackTimer   -dt);
-  P.attackCooldown=Math.max(0,P.attackCooldown-dt);
-  P.invincibleTimer=Math.max(0,P.invincibleTimer-dt);
-  P.comboTimer    =Math.max(0,P.comboTimer    -dt);
-  if (P.comboTimer===0) P.comboCount=0;
+  P.animTime += dt;
+  P.attackTimer    = Math.max(0, P.attackTimer    - dt);
+  P.attackCooldown = Math.max(0, P.attackCooldown - dt);
+  P.invincibleTimer= Math.max(0, P.invincibleTimer- dt);
+  P.comboTimer     = Math.max(0, P.comboTimer     - dt);
+  if (P.comboTimer === 0) P.comboCount = 0;
 
   if (P.isStealthKilling) {
-    P.stealthKillTimer-=dt;
-    if (P.stealthKillTimer<=0) P.isStealthKilling=false;
+    P.stealthKillTimer -= dt;
+    if (P.stealthKillTimer <= 0) P.isStealthKilling = false;
     return;
   }
 
-  // Camera-relative movement
-  const camFwd  =new THREE.Vector3(Math.sin(NM.camYaw),0,Math.cos(NM.camYaw));
-  const camRight=new THREE.Vector3(Math.cos(NM.camYaw),0,-Math.sin(NM.camYaw));
-  let mx=0,mz=0;
-  if(NM.keys['w']||NM.keys['arrowup'])   {mx+=camFwd.x; mz+=camFwd.z;}
-  if(NM.keys['s']||NM.keys['arrowdown']) {mx-=camFwd.x; mz-=camFwd.z;}
-  if(NM.keys['a']||NM.keys['arrowleft']) {mx+=camRight.x;mz+=camRight.z;}
-  if(NM.keys['d']||NM.keys['arrowright']){mx-=camRight.x;mz-=camRight.z;}
-  if(NM.joystick.active){
-    mx+=camFwd.x*(-NM.joystick.dy)-camRight.x*NM.joystick.dx;
-    mz+=camFwd.z*(-NM.joystick.dy)-camRight.z*NM.joystick.dx;
+  // ── Input → world-space move direction ──
+  const fwd   = new THREE.Vector3( Math.sin(NM.camYaw), 0,  Math.cos(NM.camYaw));
+  const right = new THREE.Vector3( Math.cos(NM.camYaw), 0, -Math.sin(NM.camYaw));
+  let mx = 0, mz = 0;
+  if (NM.keys['w'] || NM.keys['arrowup'])    { mx += fwd.x;   mz += fwd.z;   }
+  if (NM.keys['s'] || NM.keys['arrowdown'])  { mx -= fwd.x;   mz -= fwd.z;   }
+  if (NM.keys['a'] || NM.keys['arrowleft'])  { mx += right.x; mz += right.z; }
+  if (NM.keys['d'] || NM.keys['arrowright']) { mx -= right.x; mz -= right.z; }
+  if (NM.joystick.active) {
+    mx += fwd.x * (-NM.joystick.dy) - right.x * NM.joystick.dx;
+    mz += fwd.z * (-NM.joystick.dy) - right.z * NM.joystick.dx;
   }
+  const inputLen = Math.sqrt(mx * mx + mz * mz);
+  if (inputLen > 0.01) { mx /= inputLen; mz /= inputLen; }
 
-  P.isCrouching=(NM.keys['shift']||NM.btnState.sneak)&&!NM.keys['control'];
-  const wantRun=(NM.keys['control']||NM.btnState.sprint)&&!P.isCrouching;
-  const moving=(mx*mx+mz*mz)>0.01;
-  if(wantRun&&moving&&P.sprint>0){P.isSprinting=true;P.sprint=Math.max(0,P.sprint-dt*28);}
-  else{P.isSprinting=false;if(!wantRun||!moving)P.sprint=Math.min(P.maxSprint,P.sprint+dt*14);}
+  // ── Modes ──
+  P.isCrouching = (NM.keys['shift'] || NM.btnState.sneak) && !NM.keys['control'];
+  const wantRun = (NM.keys['control'] || NM.btnState.sprint) && !P.isCrouching;
+  const hasInput = inputLen > 0.01;
 
-  const spd=P.isSprinting?P.speed*2.0:P.isCrouching?P.speed*0.38:P.speed;
-  const len=Math.sqrt(mx*mx+mz*mz);
-
-  // Horizontal — hard stop on ground (no slide), gentle air drift
-  if(len>0.01){
-    mx/=len;mz/=len;
-    P.facingAngle=Math.atan2(mx,mz);
-    P.velocity.x=lerp(P.velocity.x,mx*spd,Math.min(1,30*dt));
-    P.velocity.z=lerp(P.velocity.z,mz*spd,Math.min(1,30*dt));
+  if (wantRun && hasInput && P.sprint > 0) {
+    P.isSprinting = true;
+    P.sprint = Math.max(0, P.sprint - dt * 28);
   } else {
-    const fric=P.onGround?42:5;
-    P.velocity.x=lerp(P.velocity.x,0,Math.min(1,fric*dt));
-    P.velocity.z=lerp(P.velocity.z,0,Math.min(1,fric*dt));
+    P.isSprinting = false;
+    if (!wantRun || !hasInput) P.sprint = Math.min(P.maxSprint, P.sprint + dt * 14);
   }
 
-  // Gravity — uniform, faster fall for snappy feel
-  P.yVel -= 36 * dt;
-  P.yVel = Math.max(P.yVel, -38);
+  const topSpeed = P.isSprinting ? P.speed * 2.0
+                 : P.isCrouching ? P.speed * 0.38
+                 : P.speed;
 
-  // Jump — simple edge detect, no coyote time, standard double jump
-  const jumpEdge=NM.btnState.jumpJustPressed||(NM.keys[' ']&&!P._spaceWasDown);
-  P._spaceWasDown=NM.keys[' '];
-  NM.btnState.jumpJustPressed=false;
-  if(jumpEdge){
-    if(P.onGround){
-      P.yVel=13.0; P.jumpsLeft=1;
-      P.onGround=false; sfxJump();
-    } else if(P.jumpsLeft>0){
-      P.yVel=12.0; P.jumpsLeft=0;
-      spawnDoubleJumpFX(P.mesh.position.clone()); sfxJump();
+  // ── Horizontal velocity ──
+  // Identical acceleration on ground and in air — full air control
+  if (hasInput) {
+    P.facingAngle = Math.atan2(mx, mz);
+    P.velocity.x = lerp(P.velocity.x, mx * topSpeed, Math.min(1, 26 * dt));
+    P.velocity.z = lerp(P.velocity.z, mz * topSpeed, Math.min(1, 26 * dt));
+  } else {
+    // Ground: stop fast. Air: drift slowly
+    const friction = P.onGround ? 38 : 4;
+    P.velocity.x = lerp(P.velocity.x, 0, Math.min(1, friction * dt));
+    P.velocity.z = lerp(P.velocity.z, 0, Math.min(1, friction * dt));
+  }
+
+  // ── Gravity (always on) ──
+  P.yVel -= 30 * dt;           // constant gravity
+  P.yVel  = Math.max(P.yVel, -35); // terminal velocity
+
+  // ── Jump input: edge-detect space / mobile button ──
+  const jumpPressed = NM.btnState.jumpJustPressed || (NM.keys[' '] && !P._prevSpace);
+  P._prevSpace = NM.keys[' '];
+  NM.btnState.jumpJustPressed = false;
+
+  if (jumpPressed) {
+    if (P.onGround) {
+      // First jump
+      P.yVel = 12;
+      P.jumpsLeft = 1;   // one more jump available
+      P.onGround = false;
+      sfxJump();
+    } else if (P.jumpsLeft > 0) {
+      // Second jump (double jump) — works any time in the air
+      P.yVel = 11;
+      P.jumpsLeft = 0;   // no more jumps
+      spawnDoubleJumpFX(P.mesh.position.clone());
+      sfxJump();
     }
   }
 
-  // Block works while moving
-  P.isBlocking=(NM.keys['k']||NM.btnState.block)&&!P.isAttacking;
+  // ── Other actions ──
+  P.isBlocking = (NM.keys['k'] || NM.btnState.block) && !P.isAttacking;
 
-  // Attack works while moving and jumping
-  const atkEdge=NM.keys['j']||NM.btnState.attackJustPressed;
-  if(atkEdge){
-    NM.keys['j']=false; NM.btnState.attackJustPressed=false;
-    const st=getStealthTarget();
-    if(st) doStealthKill(st);
-    else if(!P.isAttacking&&P.attackCooldown<=0) doAttack();
+  const atkPressed = NM.keys['j'] || NM.btnState.attackJustPressed;
+  if (atkPressed) {
+    NM.keys['j'] = false;
+    NM.btnState.attackJustPressed = false;
+    const st = getStealthTarget();
+    if (st) doStealthKill(st);
+    else if (!P.isAttacking && P.attackCooldown <= 0) doAttack();
   }
 
-  // Attack animation
-  if(P.isAttacking){
-    const prog=1-P.attackTimer/0.38;
-    const arm=P.mesh._swordArm;
-    if(arm){
-      if(prog<0.3){const t=prog/0.3;arm.rotation.x=lerp(0,-2.1,t);arm.rotation.z=lerp(0,-0.4,t);}
-      else{const t=(prog-0.3)/0.7,e2=1-Math.pow(1-t,2);arm.rotation.x=lerp(-2.1,1.8,e2);arm.rotation.z=lerp(-0.4,0.3,e2);}
+  if (P.isAttacking) {
+    const prog = 1 - P.attackTimer / 0.38;
+    const arm = P.mesh._swordArm;
+    if (arm) {
+      if (prog < 0.3) { const t = prog / 0.3; arm.rotation.x = lerp(0, -2.1, t); arm.rotation.z = lerp(0, -0.4, t); }
+      else { const t = (prog - 0.3) / 0.7, e2 = 1 - Math.pow(1-t, 2); arm.rotation.x = lerp(-2.1, 1.8, e2); arm.rotation.z = lerp(-0.4, 0.3, e2); }
     }
-    if(P.attackTimer<=0){P.isAttacking=false;P.attackCooldown=0.12;if(arm){arm.rotation.x=0;arm.rotation.z=0;}}
+    if (P.attackTimer <= 0) { P.isAttacking = false; P.attackCooldown = 0.12; if (arm) { arm.rotation.x = 0; arm.rotation.z = 0; } }
   }
 
-  // Move + collide
-  const from=P.mesh.position.clone();
-  const to=from.clone();
-  to.x+=P.velocity.x*dt; to.z+=P.velocity.z*dt; to.y+=P.yVel*dt;
+  // ── Move & collide ──
+  const from = P.mesh.position.clone();
+  const to   = from.clone();
+  to.x += P.velocity.x * dt;
+  to.z += P.velocity.z * dt;
+  to.y += P.yVel       * dt;
 
-  const sw=sweepPlayer(from,to);
+  const sw = sweepPlayer(from, to, P.yVel);
   P.mesh.position.copy(sw.pos);
 
-  if(sw.onGround){
-    const wasAir=!P.onGround;
-    P.onGround=true; P.yVel=0;
-    if(wasAir){P.jumpsLeft=2;if(P._fallSpeed>10)sfxFootstep(0.3);P._fallSpeed=0;}
+  if (sw.onGround) {
+    if (!P.onGround) {
+      // Just landed
+      P.jumpsLeft = 2;              // reset both jumps on landing
+      if (P._fallSpd > 12) sfxFootstep(0.3);
+    }
+    P.onGround = true;
+    P.yVel = 0;
+    P._fallSpd = 0;
   } else {
-    P._fallSpeed=Math.abs(P.yVel); P.onGround=false;
-  }
-  // Zero velocity into walls
-  if(sw.hitX) P.velocity.x=0;
-  if(sw.hitZ) P.velocity.z=0;
-
-  // Facing
-  if(len>0.01) P.mesh.rotation.y=lerpAngle(P.mesh.rotation.y,P.facingAngle,16*dt);
-
-  animChar(P,dt,len>0.01);
-
-  if(len>0.01&&P.onGround){
-    P._walkTimer=(P._walkTimer||0)-dt;
-    if(P._walkTimer<=0){sfxFootstep(0.1);P._walkTimer=P.isSprinting?0.2:0.33;}
+    P._fallSpd = Math.abs(P.yVel);
+    P.onGround = false;
   }
 
-  P.ki=Math.min(P.maxKi,P.ki+dt*8);
+  // ── Facing ──
+  if (hasInput) P.mesh.rotation.y = lerpAngle(P.mesh.rotation.y, P.facingAngle, 16 * dt);
+
+  // ── Walk sound ──
+  if (hasInput && P.onGround) {
+    P._walkTimer = (P._walkTimer || 0) - dt;
+    if (P._walkTimer <= 0) { sfxFootstep(0.1); P._walkTimer = P.isSprinting ? 0.2 : 0.33; }
+  }
+
+  // ── Animate ──
+  animChar(P, dt, hasInput);
+
+  // ── Ki regen ──
+  P.ki = Math.min(P.maxKi, P.ki + dt * 8);
+
   updateZoneHint(P.mesh.position);
   updateStealthGlow();
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  CAMERA — auto pull-in to avoid clipping

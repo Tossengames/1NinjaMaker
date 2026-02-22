@@ -449,11 +449,13 @@ async function startGame() {
   buildLevel();
   spawnPlayer();
   spawnEnemies();
+  initMinimap();
   document.getElementById('hud').style.display = 'block';
   if (NM.isMobile) document.getElementById('mobile-controls').style.display = 'block';
   updateHUD();
   gameLoop();
 }
+
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -513,174 +515,252 @@ function initThree() {
 // ══════════════════════════════════════════════════════════════
 //  LEVEL BUILDER — Jade Pagoda Night
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  LEVEL — Jade Pagoda District (much larger, open, platforming)
+// ══════════════════════════════════════════════════════════════
 function buildLevel() {
   const S = NM.scene;
+  NM.colliders = [];   // always start fresh
 
-  // Materials
-  const stoneMat = new THREE.MeshLambertMaterial({ color: 0x2a2535 });
-  const darkWoodMat = new THREE.MeshLambertMaterial({ color: 0x1a0f08 });
+  const stoneMat   = new THREE.MeshLambertMaterial({ color: 0x2a2535 });
+  const darkWoodMat= new THREE.MeshLambertMaterial({ color: 0x1a0f08 });
   const redWoodMat = new THREE.MeshLambertMaterial({ color: 0x5a1a0a });
-  const tileMat = new THREE.MeshLambertMaterial({ color: 0x1a1520 });
-  const wallMat = new THREE.MeshLambertMaterial({ color: 0x221a28 });
-  const goldMat = new THREE.MeshLambertMaterial({ color: 0x8a6a1a, emissive: 0x1a0f00, emissiveIntensity: 0.3 });
+  const tileMat    = new THREE.MeshLambertMaterial({ color: 0x1a1520 });
+  const wallMat    = new THREE.MeshLambertMaterial({ color: 0x221a28 });
+  const goldMat    = new THREE.MeshLambertMaterial({ color: 0x8a6a1a, emissive:0x1a0f00, emissiveIntensity:0.3 });
+  const woodMat    = new THREE.MeshLambertMaterial({ color: 0x2a1808 });
+  const liftMat    = new THREE.MeshLambertMaterial({ color: 0x3a2818 });
 
-  // Ground courtyard — register as ground (solid=true) but it's the flat base
-  addBox(S, 60, 0.4, 60, 0,-0.2,0, stoneMat, true, true);
-
-  // Stone tile pattern (darker squares) — decorative, no collision
-  for (let x=-4; x<=4; x++) for (let z=-4; z<=4; z++) {
-    if ((x+z)%2===0) addBox(S, 2.8, 0.05, 2.8, x*6, 0.02, z*6, tileMat, false, false);
+  // ── Ground (large open courtyard) ──
+  solid(S, 90, 0.5, 90,   0, -0.25, 0, stoneMat); // main ground
+  // Tile decoration (no collision)
+  for (let x=-6; x<=6; x++) for (let z=-6; z<=6; z++) {
+    if ((x+z)%2===0) decor(S, 3.8, 0.05, 3.8, x*7, 0.02, z*7, tileMat);
   }
 
-  // ── Pagoda (center-back) ──
-  const pagodaX = 0, pagodaZ = -20;
-  // Foundation
-  addBox(S, 12, 1, 12, pagodaX, 0.5, pagodaZ, stoneMat, true);
-  addBox(S, 10, 0.3, 10, pagodaX, 1.15, pagodaZ, stoneMat, false);
+  // ── Outer Boundary walls  ──
+  // North
+  solid(S, 90, 5, 1.5,   0, 2.5, -44, wallMat);
+  // South
+  solid(S, 90, 5, 1.5,   0, 2.5,  44, wallMat);
+  // East
+  solid(S, 1.5, 5, 90,   44, 2.5,   0, wallMat);
+  // West
+  solid(S, 1.5, 5, 90,  -44, 2.5,   0, wallMat);
 
-  // Pillars
-  const pillarPos = [[-4,-4],[4,-4],[-4,4],[4,4]];
-  pillarPos.forEach(([ox,oz]) => {
-    addBox(S, 0.7, 8, 0.7, pagodaX+ox, 5, pagodaZ+oz, darkWoodMat, true);
+  // Walkable wall tops (platforms on perimeter)
+  solid(S, 90, 0.5, 1.5,  0,  5,  -44, stoneMat);  // walk on top of N wall
+  solid(S, 90, 0.5, 1.5,  0,  5,   44, stoneMat);
+  solid(S, 1.5, 0.5, 90, 44,  5,    0, stoneMat);
+  solid(S, 1.5, 0.5, 90,-44,  5,    0, stoneMat);
+
+  // ── PAGODA (far north-centre) ──
+  const PX = 0, PZ = -32;
+  // Base platform (wide, climbable)
+  solid(S, 18, 1.5, 18, PX, 0.75, PZ, stoneMat);
+  // Steps up to platform
+  for (let i=0;i<4;i++) solid(S, 14-i*2, 0.4, 1.5, PX, 1.5+i*0.4, PZ+9-i*1.4, stoneMat);
+
+  // Floor 1 — open pillar hall
+  const pils = [[-5,-5],[5,-5],[-5,5],[5,5]];
+  pils.forEach(([ox,oz])=> solid(S, 0.9,7, 0.9, PX+ox, 4.5, PZ+oz, darkWoodMat));
+  // Floor 1 platform top
+  solid(S, 12, 0.4, 12, PX, 8.2, PZ, redWoodMat);
+  // Railing low walls
+  solid(S, 12, 0.6, 0.4, PX, 8.7, PZ-6, stoneMat);
+  solid(S, 12, 0.6, 0.4, PX, 8.7, PZ+6, stoneMat);
+  solid(S, 0.4, 0.6, 12, PX-6, 8.7, PZ, stoneMat);
+  solid(S, 0.4, 0.6, 12, PX+6, 8.7, PZ, stoneMat);
+
+  // Floor 2 — smaller
+  solid(S, 8, 0.4, 8,  PX, 11, PZ, redWoodMat);
+  solid(S, 8, 0.4, 0.3, PX, 11.5, PZ-4, stoneMat);
+  solid(S, 8, 0.4, 0.3, PX, 11.5, PZ+4, stoneMat);
+
+  // Floor 3 — tiny top
+  solid(S, 5, 0.4, 5,  PX, 13.5, PZ, redWoodMat);
+
+  // Roof tiers (visual only)
+  addPagodaRoof(S, PX, 9.5,  PZ, 13, 2.5, redWoodMat);
+  addPagodaRoof(S, PX, 12,   PZ,  9, 2,   redWoodMat);
+  addPagodaRoof(S, PX, 14.5, PZ,  6, 1.8, redWoodMat);
+  decor(S, 0.3, 3.5, 0.3, PX, 16.5, PZ, goldMat); // spire
+
+  // Pagoda side access ramps / platforms
+  solid(S, 4, 0.4, 4, PX-10, 2,   PZ+4,  stoneMat); // left mid
+  solid(S, 4, 0.4, 4, PX+10, 2,   PZ+4,  stoneMat); // right mid
+  solid(S, 4, 0.4, 4, PX-10, 5,   PZ,    stoneMat); // left high
+  solid(S, 4, 0.4, 4, PX+10, 5,   PZ,    stoneMat); // right high
+  solid(S, 4, 0.4, 4, PX-10, 8,   PZ-4,  stoneMat); // left highest
+  solid(S, 4, 0.4, 4, PX+10, 8,   PZ-4,  stoneMat); // right highest
+
+  // ── EAST DISTRICT — Barracks / guard towers ──
+  // Barracks building
+  solid(S, 14, 0.5, 10, 28, 0.25, -15, stoneMat);
+  solid(S, 14, 4, 0.5,  28, 2.25, -20, wallMat);
+  solid(S, 14, 4, 0.5,  28, 2.25, -10, wallMat);
+  solid(S, 0.5, 4, 10,  21, 2.25, -15, wallMat);
+  solid(S, 0.5, 4, 10,  35, 2.25, -15, wallMat);
+  // Barracks roof (walkable)
+  solid(S, 14, 0.5, 10, 28, 4.25, -15, stoneMat);
+
+  // Barracks steps
+  solid(S, 4, 0.4, 1.5, 28, 0.7, -9.5, stoneMat);
+  solid(S, 4, 0.7, 1.5, 28, 1.1, -8.5, stoneMat);
+
+  // East elevated walkway
+  solid(S, 0.8, 4, 22, 38, 2, -10, stoneMat);         // wall
+  solid(S, 2, 0.5, 22, 38, 4.25, -10, stoneMat);      // walkway top
+  solid(S, 2, 0.5, 6,  32, 4.25, -20, stoneMat);      // cross bridge
+
+  // ── WEST DISTRICT — Temple courtyard ──
+  // Temple base
+  solid(S, 16, 1, 16, -28, 0.5, -10, stoneMat);
+  solid(S, 16, 0.5, 16, -28, 3.5, -10, redWoodMat); // temple roof/platform
+
+  // Temple steps
+  solid(S, 6, 0.4, 1.5, -28, 0.8, -2.5, stoneMat);
+  solid(S, 5, 0.7, 1.5, -28, 1.2, -1.5, stoneMat);
+  solid(S, 4, 1.0, 1.5, -28, 1.6, -0.7, stoneMat);
+
+  // Temple pillars
+  [[-6,-6],[ 6,-6],[-6,6],[6,6]].forEach(([ox,oz])=>
+    solid(S, 0.8, 5, 0.8, -28+ox, 2.5, -10+oz, darkWoodMat)
+  );
+
+  // West walkway
+  solid(S, 22, 0.5, 2, -32, 5, -10, stoneMat); // connects west wall to temple roof
+
+  // ── SOUTH DISTRICT — Garden & market ──
+  // Market stalls (platforms for parkour)
+  [[-15,0,20],[-7,0,22],[0,0,24],[7,0,22],[15,0,20]].forEach(([x,y,z],i)=>{
+    solid(S, 5, 0.5, 5,  x, 1.8+i%2*0.8, z, liftMat);
+    decor(S, 5, 3, 0.3,  x, 3.5+i%2*0.8, z-2.5, redWoodMat); // stall awning back
   });
+  // Big garden platform (lower)
+  solid(S, 12, 0.4, 12, 0, 1.2, 30, stoneMat);
+  solid(S, 8, 0.4, 8,  0, 3,   30, stoneMat);   // raised centre
+  solid(S, 4, 0.4, 4,  0, 4.5, 30, stoneMat);   // top tier
 
-  // Floor 1 walls
-  addBox(S, 8, 5, 0.4, pagodaX, 4.5, pagodaZ-4, wallMat, true);
-  addBox(S, 8, 5, 0.4, pagodaX, 4.5, pagodaZ+4, wallMat, true);
-  addBox(S, 0.4, 5, 8, pagodaX-4, 4.5, pagodaZ, wallMat, true);
-  addBox(S, 0.4, 5, 8, pagodaX+4, 4.5, pagodaZ, wallMat, true);
+  // ── CENTRE FEATURES — parkour line north-south ──
+  // Stepping stones
+  const stones = [
+    [0,1.2,-5], [-4,2,-8], [4,2.8,-11], [0,3.5,-14],
+    [-5,4.2,-17], [5,5,-20], [0,5.8,-23], [0,7,-27],
+  ];
+  stones.forEach(([x,y,z])=> solid(S, 3, 0.4, 3, x, y, z, stoneMat));
 
-  // Roof tiers
-  addPagodaRoof(S, pagodaX, 7.5, pagodaZ, 10, 2.5, redWoodMat);
-  addPagodaRoof(S, pagodaX, 10, pagodaZ, 7, 2, redWoodMat);
-  addPagodaRoof(S, pagodaX, 12, pagodaZ, 5, 1.8, redWoodMat);
-  addPagodaRoof(S, pagodaX, 13.8, pagodaZ, 3, 1.5, redWoodMat);
-  // Spire
-  addBox(S, 0.3, 3, 0.3, pagodaX, 15.5, pagodaZ, goldMat, false);
+  // ── GUARD TOWERS (corners) ──
+  addTower(S, -40, 0, -40, stoneMat, goldMat);
+  addTower(S,  40, 0, -40, stoneMat, goldMat);
+  addTower(S, -40, 0,  40, stoneMat, goldMat);
+  addTower(S,  40, 0,  40, stoneMat, goldMat);
 
-  // Pagoda steps
-  for (let i=0; i<4; i++) {
-    addBox(S, 6-i*0.5, 0.3, 6-i*0.5, pagodaX, 1.3+i*0.3, pagodaZ+4-i*0.5, stoneMat, true);
-  }
+  // ── COVER / LOW WALLS (combat cover) ──
+  const covers = [
+    [8, 1.2, 0.5,  -5, 0.6, -5],
+    [0.5, 1.2, 7,   10, 0.6,  2],
+    [5, 0.8, 0.5,   3, 0.4,  8],
+    [6, 1.5, 0.5,  -12, 0.75, -3],
+    [0.5, 1.5, 6,  14, 0.75, 5],
+    [4, 1, 0.5,     0, 0.5,  15],
+    [0.5, 1, 5,   -14, 0.5,  10],
+    [6, 1, 0.5,    20, 0.5,   0],
+  ];
+  covers.forEach(([w,h,d,x,y,z])=> solid(S, w,h,d, x,y,z, stoneMat));
 
-  // ── Walls & Battlements ──
-  // Back wall
-  for (let x=-14; x<=14; x+=2) {
-    addBox(S, 1.8, 4, 1, x, 2, -29, stoneMat, true);
-    if (x%4===0) addBox(S, 1.8, 1, 1, x, 4.5, -29, stoneMat, false); // merlons
-  }
-  // Side walls
-  for (let z=-14; z<=14; z+=2) {
-    addBox(S, 1, 4, 1.8, -15, 2, z, stoneMat, true);
-    addBox(S, 1, 4, 1.8, 15, 2, z, stoneMat, true);
-  }
+  // ── LANTERNS ──
+  const lanternPos = [
+    [-8,0,-8],[-8,0,0],[-8,0,8],[8,0,-8],[8,0,0],[8,0,8],
+    [0,0,-12],[0,0,6],[-5,0,-20],[5,0,-20],
+    [28,4,-15],[-28,3.5,-10],
+    [-15,0,20],[0,0,24],[15,0,20],
+    [0,3,30], [-4,4.5,30],[4,4.5,30],
+  ];
+  lanternPos.forEach(([x,y,z])=> addLantern(S,x,y,z));
 
-  // ── Guard towers (corners) ──
-  addTower(S, -13, 0, -27, stoneMat, goldMat);
-  addTower(S, 13, 0, -27, stoneMat, goldMat);
-  addTower(S, -13, 0, 12, stoneMat, goldMat);
-  addTower(S, 13, 0, 12, stoneMat, goldMat);
+  // ── TREES ──
+  [[-20,0,5],[20,0,5],[-20,0,-8],[20,0,-8],
+   [-6,0,10],[6,0,10],[-18,0,25],[18,0,25],
+   [-25,0,-25],[25,0,-25],
+  ].forEach(([x,y,z])=> addTree(S,x,y,z));
 
-  // ── Decorative elements ──
-  // Stone lantern posts
-  const lanternPos = [[-8,0,-8],[-8,0,0],[-8,0,8],[8,0,-8],[8,0,0],[8,0,8],
-                      [0,0,-12],[0,0,5],[-5,0,-15],[5,0,-15]];
-  lanternPos.forEach(([x,y,z]) => addLantern(S, x, y, z));
-
-  // Barrels / crates
-  [[5,0,3],[-3,0,6],[7,0,-5],[-6,0,-5],[3,0,-8]].forEach(([x,y,z]) => {
-    addBox(S, 1.2, 1.2, 1.2, x, 0.6, z, stoneMat, true);
-  });
-
-  // Cherry blossom trees
-  [[-11,0,3],[11,0,3],[-11,0,-10],[11,0,-10],[-5,0,8],[5,0,8]].forEach(([x,y,z]) => {
-    addTree(S, x, y, z);
-  });
-
-  // Low wall (cover)
-  addBox(S, 6, 1.2, 0.5, -4, 0.6, -5, stoneMat, true);
-  addBox(S, 0.5, 1.2, 5, 7, 0.6, 2, stoneMat, true);
-  addBox(S, 4, 0.8, 0.5, 3, 0.4, 7, stoneMat, true);
-
-  // ── Sky (stars) ──
+  // ── SKY ──
   buildStarfield(S);
-
-  // Moon sphere
-  const moonGeo = new THREE.SphereGeometry(4, 16, 16);
-  const moonMat = new THREE.MeshBasicMaterial({ color: 0xd4c870 });
-  const moonMesh = new THREE.Mesh(moonGeo, moonMat);
-  moonMesh.position.set(60, 80, -80);
+  const moonMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(5,16,16),
+    new THREE.MeshBasicMaterial({color:0xd4c870})
+  );
+  moonMesh.position.set(80,100,-120);
   S.add(moonMesh);
 
-  // Ground plane for raycasting (invisible)
   NM.groundY = 0;
-  NM.levelBounds = { minX:-14, maxX:14, minZ:-28, maxZ:12 };
+  NM.levelBounds = { minX:-43, maxX:43, minZ:-43, maxZ:43 };
 }
 
-function addBox(S, w, h, d, x, y, z, mat, shadow, solid=true) {
+// Register a solid collider + add mesh
+function solid(S, w, h, d, x, y, z, mat) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
   mesh.position.set(x,y,z);
-  if (shadow) { mesh.castShadow = true; mesh.receiveShadow = true; }
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
   S.add(mesh);
-  // Register as solid collider (skip purely decorative flat tiles)
-  if (solid && h > 0.1) {
-    NM.colliders = NM.colliders || [];
-    NM.colliders.push({
-      minX: x - w/2, maxX: x + w/2,
-      minY: y - h/2, maxY: y + h/2,
-      minZ: z - d/2, maxZ: z + d/2,
-      w, h, d, cx: x, cy: y, cz: z
-    });
-  }
+  NM.colliders.push({
+    minX: x-w/2, maxX: x+w/2,
+    minY: y-h/2, maxY: y+h/2,
+    minZ: z-d/2, maxZ: z+d/2,
+  });
   return mesh;
 }
 
+// Decorative mesh — no collision
+function decor(S, w, h, d, x, y, z, mat) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  mesh.position.set(x,y,z);
+  mesh.castShadow = false;
+  S.add(mesh);
+  return mesh;
+}
+
+// Keep addBox for legacy calls (no collision by default now)
+function addBox(S, w, h, d, x, y, z, mat, shadow, doSolid=false) {
+  if (doSolid) return solid(S,w,h,d,x,y,z,mat);
+  return decor(S,w,h,d,x,y,z,mat);
+}
+
 function addPagodaRoof(S, x, y, z, size, height, mat) {
-  // Simple roof using 4 triangular planes combined as box + overhang
-  const base = addBox(S, size+1, 0.4, size+1, x, y-0.2, z, mat, false);
-  // overhang corners (flared)
-  const flare = new THREE.Mesh(
-    new THREE.BoxGeometry(size+2.5, 0.2, size+2.5),
-    mat
-  );
-  flare.position.set(x, y-0.4, z);
-  S.add(flare);
-  // pyramid top
+  decor(S, size+2, 0.25, size+2, x, y-0.12, z, mat);
   const geo = new THREE.ConeGeometry(size*0.72, height, 4);
   geo.rotateY(Math.PI/4);
   const cone = new THREE.Mesh(geo, mat);
-  cone.position.set(x, y+height*0.5-0.1, z);
+  cone.position.set(x, y+height*0.5, z);
   cone.castShadow = true;
   S.add(cone);
 }
 
 function addTower(S, x, y, z, mat, capMat) {
-  addBox(S, 4, 6, 4, x, 3, z, mat, true);
-  addBox(S, 5, 0.5, 5, x, 6.25, z, mat, false); // parapet base
-  for (let i=0; i<4; i++) {
-    const a = i/4*Math.PI*2;
-    addBox(S, 1, 1.2, 1, x+Math.cos(a)*2, 7, z+Math.sin(a)*2, mat, false);
+  solid(S, 5, 7, 5,  x, 3.5, z, mat);
+  decor(S, 6.5, 0.5, 6.5, x, 7.25, z, mat);
+  for (let i=0;i<4;i++){
+    const a=i/4*Math.PI*2;
+    decor(S, 1.2,1.4,1.2, x+Math.cos(a)*2.5, 8, z+Math.sin(a)*2.5, mat);
   }
-  // Cap lantern
-  const light = new THREE.PointLight(0xff8822, 1.5, 10);
-  light.position.set(x, 7.5, z);
+  // Walkable tower top
+  solid(S, 4, 0.3, 4, x, 7.4, z, stoneMat||mat);
+  const light = new THREE.PointLight(0xff8822,1.5,14);
+  light.position.set(x,8.5,z);
   S.add(light);
 }
 
 function addLantern(S, x, y, z) {
-  // Post
-  addBox(S, 0.15, 2.5, 0.15, x, y+1.25, z, new THREE.MeshLambertMaterial({color:0x2a1a0a}), false);
-  // Lantern body
-  const lGeo = new THREE.BoxGeometry(0.5, 0.6, 0.5);
-  const lMat = new THREE.MeshLambertMaterial({ color: 0xffd080, emissive: 0xff9900, emissiveIntensity: 0.8 });
-  const lan = new THREE.Mesh(lGeo, lMat);
-  lan.position.set(x, y+2.8, z);
+  decor(S, 0.15,2.5,0.15, x, y+1.25, z, new THREE.MeshLambertMaterial({color:0x2a1a0a}));
+  const lMat = new THREE.MeshLambertMaterial({color:0xffd080,emissive:0xff9900,emissiveIntensity:0.8});
+  const lan = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,0.5), lMat);
+  lan.position.set(x,y+2.8,z);
   S.add(lan);
-  // Light
-  const light = new THREE.PointLight(0xff9922, 1.2, 8);
-  light.position.set(x, y+2.8, z);
+  const light = new THREE.PointLight(0xff9922,1.2,9);
+  light.position.set(x,y+2.8,z);
   S.add(light);
-  // Flicker
   lan._light = light;
   lan._flickerBase = 1.2;
   NM._lanterns = NM._lanterns || [];
@@ -688,40 +768,553 @@ function addLantern(S, x, y, z) {
 }
 
 function addTree(S, x, y, z) {
-  // Trunk
-  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x2a1a10 });
-  const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 3, 6);
-  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-  trunk.position.set(x, y+1.5, z);
+  const trunkMat  = new THREE.MeshLambertMaterial({color:0x2a1a10});
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.32,3.5,6), trunkMat);
+  trunk.position.set(x,y+1.75,z);
   trunk.castShadow = true;
   S.add(trunk);
-  // Blossom clusters
-  const blossomMat = new THREE.MeshLambertMaterial({ color: 0xd4607a, transparent: true, opacity: 0.9 });
-  [[0,3.5,0],[0.8,3,0.5],[-0.7,3.2,-0.4],[0.4,3.8,-0.7],[-0.3,2.8,0.8]].forEach(([ox,oy,oz]) => {
-    const geo = new THREE.SphereGeometry(0.7+Math.random()*0.4, 6, 5);
-    const b = new THREE.Mesh(geo, blossomMat);
-    b.position.set(x+ox, y+oy, z+oz);
+  const bMat = new THREE.MeshLambertMaterial({color:0xd4607a,transparent:true,opacity:0.88});
+  [[0,3.8,0],[0.9,3.2,0.6],[-0.8,3.4,-0.5],[0.4,4,-0.8],[-0.3,3,0.9]].forEach(([ox,oy,oz])=>{
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.8+Math.random()*0.4,6,5), bMat);
+    b.position.set(x+ox,y+oy,z+oz);
     S.add(b);
   });
 }
 
 function buildStarfield(S) {
   const geo = new THREE.BufferGeometry();
-  const positions = [];
-  for (let i=0; i<800; i++) {
-    const theta = Math.random()*Math.PI*2;
-    const phi = Math.acos(2*Math.random()-1)*0.5; // upper hemisphere
-    const r = 100 + Math.random()*50;
-    positions.push(r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi)+20, r*Math.sin(phi)*Math.sin(theta));
+  const pos = [];
+  for(let i=0;i<1000;i++){
+    const theta=Math.random()*Math.PI*2, phi=Math.acos(2*Math.random()-1)*0.5, r=120+Math.random()*60;
+    pos.push(r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi)+30, r*Math.sin(phi)*Math.sin(theta));
   }
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
-  const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: true });
-  S.add(new THREE.Points(geo, mat));
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  S.add(new THREE.Points(geo, new THREE.PointsMaterial({color:0xffffff,size:0.3,sizeAttenuation:true})));
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CHARACTER BUILDER — procedural 3D models
+//  COLLISION SYSTEM — clean AABB, axis-separated
 // ══════════════════════════════════════════════════════════════
+// Returns the highest surface Y the character can stand on at (x,z)
+// within a vertical sweep from py to py+CHAR_H.
+// Also returns side hits for sliding.
+const CHAR_H   = 1.85;  // character total height
+const CHAR_R   = 0.32;  // horizontal capsule radius
+const STEP_H   = 0.55;  // auto step-up (climb ledges this high)
+
+function sweepAABB(startPos, endPos) {
+  // startPos/endPos : THREE.Vector3
+  // Returns { pos, onGround, hitX, hitZ, wallNormal, groundY, wallX, wallZ }
+  const R = NM.colliders;
+  const r = CHAR_R;
+
+  let px = endPos.x, py = endPos.y, pz = endPos.z;
+  const prevY = startPos.y;
+  let onGround = false, hitX = false, hitZ = false;
+  let groundY  = -Infinity;
+  let wallNX = 0, wallNZ = 0; // wall normal for wall jump
+
+  for (const c of R) {
+    // Broad phase — skip if clearly not overlapping
+    if (px+r <= c.minX || px-r >= c.maxX) continue;
+    if (pz+r <= c.minZ || pz-r >= c.maxZ) continue;
+    if (py >= c.maxY + CHAR_H || py+CHAR_H <= c.minY) continue;
+
+    // Character feet at py, head at py+CHAR_H
+    const feetY = py;
+    const top   = c.maxY;  // top surface of collider
+
+    // ── Top surface: can we stand on it? ──
+    // Previous feet were at or above top (minus step), and we're moving down into it
+    if (prevY >= top - STEP_H && feetY <= top + 0.05) {
+      if (top > groundY) groundY = top;
+      onGround = true;
+      continue; // landing, don't treat as wall
+    }
+
+    // ── Side collision (not stepping up) ──
+    // Find minimum overlap on X and Z
+    const penL = (px + r) - c.minX;  // overlap when pushing from left
+    const penR = c.maxX - (px - r);  // overlap when pushing from right
+    const penF = (pz + r) - c.minZ;
+    const penB = c.maxZ - (pz - r);
+
+    const minX = Math.min(penL, penR);
+    const minZ = Math.min(penF, penB);
+
+    if (minX < minZ) {
+      if (penL < penR) { px = c.minX - r; wallNX = -1; }
+      else             { px = c.maxX + r; wallNX =  1; }
+      hitX = true;
+    } else {
+      if (penF < penB) { pz = c.minZ - r; wallNZ = -1; }
+      else             { pz = c.maxZ + r; wallNZ =  1; }
+      hitZ = true;
+    }
+  }
+
+  // Snap feet to ground surface
+  if (onGround && groundY > -Infinity) {
+    py = groundY;
+  }
+
+  // Hard floor
+  if (py < 0) { py = 0; onGround = true; groundY = 0; }
+
+  // Level boundary
+  const B = NM.levelBounds;
+  if (px - r < B.minX) { px = B.minX + r; hitX = true; wallNX =  1; }
+  if (px + r > B.maxX) { px = B.maxX - r; hitX = true; wallNX = -1; }
+  if (pz - r < B.minZ) { pz = B.minZ + r; hitZ = true; wallNZ =  1; }
+  if (pz + r > B.maxZ) { pz = B.maxZ - r; hitZ = true; wallNZ = -1; }
+
+  return {
+    pos: new THREE.Vector3(px, py, pz),
+    onGround, hitX, hitZ, groundY,
+    wallNX, wallNZ,
+    isWall: (hitX || hitZ) && !onGround,
+  };
+}
+
+function resolveEnemyCollision(pos, radius) {
+  let rx = pos.x, rz = pos.z;
+  for (const c of NM.colliders) {
+    if (c.maxY < 0.3) continue;        // ignore thin ground slabs for AI
+    if (c.minY > 0.6) continue;        // skip elevated platforms for AI pathing
+    if (rx+radius <= c.minX || rx-radius >= c.maxX) continue;
+    if (rz+radius <= c.minZ || rz-radius >= c.maxZ) continue;
+    const penL = (rx+radius) - c.minX, penR = c.maxX - (rx-radius);
+    const penF = (rz+radius) - c.minZ, penB = c.maxZ - (rz-radius);
+    if (Math.min(penL,penR) < Math.min(penF,penB)) {
+      rx = penL<penR ? c.minX-radius : c.maxX+radius;
+    } else {
+      rz = penF<penB ? c.minZ-radius : c.maxZ+radius;
+    }
+  }
+  const B = NM.levelBounds;
+  return new THREE.Vector3(
+    clamp(rx, B.minX+radius, B.maxX-radius), pos.y,
+    clamp(rz, B.minZ+radius, B.maxZ-radius)
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DOUBLE JUMP FX
+// ══════════════════════════════════════════════════════════════
+function spawnDoubleJumpFX(pos) {
+  for (let i=0;i<14;i++){
+    const a = (i/14)*Math.PI*2;
+    const geo = new THREE.SphereGeometry(0.06,3,3);
+    const mat = new THREE.MeshBasicMaterial({color:0x88ccff});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(pos); mesh.position.y += 0.3;
+    NM.scene.add(mesh);
+    NM.particles.push({mesh, vel:new THREE.Vector3(Math.cos(a)*3.5,1.2,Math.sin(a)*3.5), life:0.7,maxLife:0.7,gravity:true,type:'spark'});
+  }
+}
+
+function spawnWallJumpFX(pos, nx, nz) {
+  for (let i=0;i<10;i++){
+    const geo = new THREE.SphereGeometry(0.05,3,3);
+    const mat = new THREE.MeshBasicMaterial({color:0xffcc44});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(pos);
+    NM.scene.add(mesh);
+    NM.particles.push({
+      mesh,
+      vel: new THREE.Vector3(nx*2+(Math.random()-0.5)*3, 2+Math.random()*2, nz*2+(Math.random()-0.5)*3),
+      life:0.6,maxLife:0.6,gravity:true,type:'spark'
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PLAYER UPDATE  — Celeste-style physics
+// ══════════════════════════════════════════════════════════════
+function updatePlayer(dt) {
+  const P = NM.player;
+  if (!P || P.hp <= 0) return;
+
+  P.animTime += dt;
+  P.attackTimer    = Math.max(0, P.attackTimer    - dt);
+  P.attackCooldown = Math.max(0, P.attackCooldown - dt);
+  P.invincibleTimer= Math.max(0, P.invincibleTimer- dt);
+  P.comboTimer     = Math.max(0, P.comboTimer     - dt);
+  if (P.comboTimer === 0) P.comboCount = 0;
+
+  if (P.isStealthKilling) {
+    P.stealthKillTimer -= dt;
+    if (P.stealthKillTimer <= 0) P.isStealthKilling = false;
+    return;
+  }
+
+  // ── Camera-relative move vectors ──
+  const camFwd  = new THREE.Vector3(Math.sin(NM.camYaw),0, Math.cos(NM.camYaw)).normalize();
+  const camRight= new THREE.Vector3(Math.cos(NM.camYaw),0,-Math.sin(NM.camYaw)).normalize();
+
+  let moveX=0, moveZ=0;
+  if (NM.keys['w']||NM.keys['arrowup'])    { moveX+=camFwd.x;  moveZ+=camFwd.z;  }
+  if (NM.keys['s']||NM.keys['arrowdown'])  { moveX-=camFwd.x;  moveZ-=camFwd.z;  }
+  if (NM.keys['a']||NM.keys['arrowleft'])  { moveX+=camRight.x; moveZ+=camRight.z; }
+  if (NM.keys['d']||NM.keys['arrowright']) { moveX-=camRight.x; moveZ-=camRight.z; }
+  if (NM.joystick.active) {
+    const jx=NM.joystick.dx, jz=NM.joystick.dy;
+    moveX += camFwd.x*(-jz) - camRight.x*jx;
+    moveZ += camFwd.z*(-jz) - camRight.z*jx;
+  }
+
+  P.isCrouching = NM.keys['shift'] && !NM.keys['control'];
+
+  // Sprint
+  const wantSprint = (NM.keys['control']||NM.btnState.sprint) && !P.isCrouching;
+  const moving = (moveX*moveX+moveZ*moveZ)>0.01;
+  if (wantSprint && moving && P.sprint>0) {
+    P.isSprinting=true; P.sprint=Math.max(0,P.sprint-dt*28);
+  } else {
+    P.isSprinting=false;
+    if (!wantSprint||!moving) P.sprint=Math.min(P.maxSprint,P.sprint+dt*15);
+  }
+
+  const topSpd = P.isAttacking?P.speed*0.2 : P.isSprinting?P.speed*2.0 : P.isCrouching?P.speed*0.35 : P.speed;
+
+  // ── Horizontal velocity with air control ──
+  const len = Math.sqrt(moveX*moveX+moveZ*moveZ);
+  const accel    = P.onGround ? 28 : 14;   // faster ground accel, Celeste-style
+  const friction = P.onGround ? 22 : 5;    // tight ground stop, floaty air
+
+  if (len > 0.01) {
+    moveX/=len; moveZ/=len;
+    P.facingAngle = Math.atan2(moveX, moveZ);
+    P.velocity.x = lerp(P.velocity.x, moveX*topSpd, Math.min(1,accel*dt));
+    P.velocity.z = lerp(P.velocity.z, moveZ*topSpd, Math.min(1,accel*dt));
+  } else {
+    P.velocity.x = lerp(P.velocity.x, 0, Math.min(1,friction*dt));
+    P.velocity.z = lerp(P.velocity.z, 0, Math.min(1,friction*dt));
+  }
+
+  // ── Gravity ──
+  // Variable gravity: heavier when falling, lighter on rise (Celeste feel)
+  const grav = P.yVel > 0 ? 22 : 30;
+  P.yVel -= grav * dt;
+  P.yVel = Math.max(P.yVel, -28);
+
+  // Coyote time: allow jump shortly after walking off edge
+  if (P.onGround) { P._coyoteTimer = 0.12; }
+  else if (P._coyoteTimer > 0) { P._coyoteTimer -= dt; }
+
+  // ── Jump input ── edge-detected, stored as 'buffered' for 0.1s
+  const jumpRaw = NM.btnState.jumpJustPressed || (NM.keys[' '] && !P._spaceWasDown);
+  P._spaceWasDown = NM.keys[' '];
+  NM.btnState.jumpJustPressed = false;
+  if (jumpRaw) P._jumpBuffer = 0.12;  // buffer window
+  if (P._jumpBuffer > 0) P._jumpBuffer -= dt;
+
+  // Wall slide detection (touching wall while airborne)
+  P._onWall = (P._lastSweep && P._lastSweep.isWall && !P.onGround);
+
+  // Wall slide gravity reduction
+  if (P._onWall) {
+    P.yVel = Math.max(P.yVel, -4); // slow slide down wall
+  }
+
+  // ── Consume buffered jump ──
+  if (P._jumpBuffer > 0) {
+    const canCoyote  = P._coyoteTimer > 0;
+    const canGround  = P.onGround;
+    const canDouble  = P.jumpsLeft === 1 && !P.onGround && !P._onWall;
+    const canWall    = P._onWall;
+
+    if (canGround || canCoyote) {
+      // Normal jump — full speed preserved
+      P.yVel = 10.5;
+      P.jumpsLeft = 1;   // one double-jump left
+      P._coyoteTimer = 0;
+      P._jumpBuffer  = 0;
+      P.onGround = false;
+      sfxJump();
+    } else if (canWall) {
+      // Wall jump — kick away from wall
+      const nx = P._lastSweep.wallNX, nz = P._lastSweep.wallNZ;
+      P.velocity.x = nx * topSpd * 1.4;
+      P.velocity.z = nz * topSpd * 1.4;
+      P.yVel = 9.5;
+      P.jumpsLeft = 1;
+      P._jumpBuffer = 0;
+      P._wallJumpLock = 0.22; // brief lock-out so player can let go
+      spawnWallJumpFX(P.mesh.position.clone().add(new THREE.Vector3(0,1,0)), nx, nz);
+      sfxJump();
+    } else if (canDouble) {
+      // Double jump — slight momentum boost
+      P.yVel = 9.0;
+      P.velocity.x *= 1.15; P.velocity.z *= 1.15;
+      P.jumpsLeft = 0;
+      P._jumpBuffer = 0;
+      spawnDoubleJumpFX(P.mesh.position.clone());
+      sfxJump();
+    }
+  }
+
+  // Wall jump input lock
+  if (P._wallJumpLock > 0) {
+    P._wallJumpLock -= dt;
+  }
+
+  // ── Blocking ──
+  P.isBlocking = (NM.keys['k']||NM.btnState.block) && !P.isAttacking && P.onGround;
+
+  // ── Attack input ──
+  const atkPressed = NM.keys['j']||NM.btnState.attackJustPressed;
+  if (atkPressed) {
+    NM.keys['j']=false; NM.btnState.attackJustPressed=false;
+    const nearEnemy = getStealthTarget();
+    if (nearEnemy) doStealthKill(nearEnemy);
+    else if (!P.isAttacking && P.attackCooldown<=0) doAttack();
+  }
+
+  // ── Attack animation ──
+  if (P.isAttacking) {
+    P.attackTimer -= dt;
+    const total=0.42, prog=1-P.attackTimer/total;
+    const swingArm = P.mesh._swordArm;
+    if (swingArm){
+      if (prog<0.25){ const t=prog/0.25; swingArm.rotation.x=lerp(0,-2.2,t); swingArm.rotation.z=lerp(0,-0.3,t); }
+      else{ const t=(prog-0.25)/0.75, e2=1-Math.pow(1-t,2); swingArm.rotation.x=lerp(-2.2,1.6,e2); swingArm.rotation.z=lerp(-0.3,0.2,e2); }
+    }
+    if (P.attackTimer<=0){ P.isAttacking=false; P.attackCooldown=0.15;
+      if(swingArm){swingArm.rotation.x=0;swingArm.rotation.z=0;} }
+  }
+
+  // ── Apply movement + sweep collision ──
+  const startPos = P.mesh.position.clone();
+  const desiredPos = startPos.clone();
+  desiredPos.x += P.velocity.x * dt;
+  desiredPos.z += P.velocity.z * dt;
+  desiredPos.y += P.yVel * dt;
+
+  const sweep = sweepAABB(startPos, desiredPos);
+  P._lastSweep = sweep;
+  P.mesh.position.copy(sweep.pos);
+
+  if (sweep.onGround) {
+    const wasAir = !P.onGround;
+    P.onGround = true;
+    P.yVel = 0;
+    if (wasAir) {
+      P.jumpsLeft = 2;   // restore both jumps on landing
+      if (P._fallSpeed > 8) sfxFootstep(0.3); // landing thud
+    }
+  } else {
+    P._fallSpeed = Math.abs(P.yVel);
+    P.onGround = false;
+  }
+
+  if (sweep.hitX) P.velocity.x *= 0.1;
+  if (sweep.hitZ) P.velocity.z *= 0.1;
+
+  // ── Facing ──
+  P.mesh.rotation.y = lerpAngle(P.mesh.rotation.y, P.facingAngle, 18*dt);
+
+  // ── Animate ──
+  animateCharacter(P, dt, len>0.01);
+
+  // ── Walk sound ──
+  if (len>0.01 && P.onGround && !P.isCrouching){
+    P._walkTimer=(P._walkTimer||0)-dt;
+    if(P._walkTimer<=0){sfxFootstep(0.1); P._walkTimer=P.isSprinting?0.22:0.35;}
+  }
+
+  // ── Ki regen ──
+  P.ki = Math.min(P.maxKi, P.ki+dt*8);
+
+  // ── Stealth ──
+  updateStealthState(P);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CAMERA  — transparency when occluded + collision pull-in
+// ══════════════════════════════════════════════════════════════
+function updateCamera(dt) {
+  if (!NM.player) return;
+  const P = NM.player.mesh.position;
+  const preset  = NM.CAM_PRESETS[NM.camMode];
+  const targetDist  = NM.camDist; // camDist is free-scrolled, presets used for initial
+  const targetPitch = preset[1];
+  const targetFov   = preset[2];
+
+  NM.camYaw  -= NM.mouse.dx * 0.003;
+  NM.camPitch = clamp(NM.camPitch - NM.mouse.dy*0.003, -0.06, 0.78);
+  NM.mouse.dx = 0; NM.mouse.dy = 0;
+
+  // Blend toward preset pitch gently
+  NM.camPitch = lerp(NM.camPitch, targetPitch, dt*0.8);
+  NM.camera.fov = lerp(NM.camera.fov, targetFov, dt*5);
+  NM.camera.updateProjectionMatrix();
+
+  if (NM.camMode === 3) { // FPS
+    NM.player.mesh.visible=false;
+    const eyeY=P.y+1.6;
+    NM.camera.position.set(P.x,eyeY,P.z);
+    const ld=new THREE.Vector3(Math.sin(NM.camYaw),-Math.sin(NM.camPitch),Math.cos(NM.camYaw));
+    NM.camera.lookAt(P.x+ld.x*10,eyeY+ld.y*10,P.z+ld.z*10);
+    return;
+  }
+  NM.player.mesh.visible=true;
+
+  const followTarget=new THREE.Vector3(P.x,P.y+1.3,P.z);
+  NM.camTarget.lerp(followTarget, dt*12);
+
+  // Desired camera position
+  let dist = NM.camDist;
+
+  // Pull camera in if something is between it and player (prevent geometry clip)
+  const idealPos = new THREE.Vector3(
+    NM.camTarget.x - Math.sin(NM.camYaw)*Math.cos(NM.camPitch)*dist,
+    NM.camTarget.y + Math.sin(NM.camPitch)*dist,
+    NM.camTarget.z - Math.cos(NM.camYaw)*Math.cos(NM.camPitch)*dist
+  );
+  // Binary search for closest unobstructed distance
+  let lo=1.2, hi=dist, best=dist;
+  for (let i=0;i<6;i++){
+    const mid=(lo+hi)/2;
+    const testPos=new THREE.Vector3(
+      NM.camTarget.x - Math.sin(NM.camYaw)*Math.cos(NM.camPitch)*mid,
+      NM.camTarget.y + Math.sin(NM.camPitch)*mid,
+      NM.camTarget.z - Math.cos(NM.camYaw)*Math.cos(NM.camPitch)*mid
+    );
+    if (isCamPathClear(NM.camTarget, testPos)) { lo=mid; best=mid; }
+    else hi=mid;
+  }
+  const targetCamDist = Math.max(1.5, best);
+
+  const camPos=new THREE.Vector3(
+    NM.camTarget.x - Math.sin(NM.camYaw)*Math.cos(NM.camPitch)*targetCamDist,
+    NM.camTarget.y + Math.sin(NM.camPitch)*targetCamDist,
+    NM.camTarget.z - Math.cos(NM.camYaw)*Math.cos(NM.camPitch)*targetCamDist
+  );
+  if(camPos.y<0.5) camPos.y=0.5;
+  NM.camera.position.lerp(camPos, dt*14);
+  NM.camera.lookAt(NM.camTarget);
+
+  // Fade player mesh when camera is very close (avoid seeing inside character)
+  const camDist2player = NM.camera.position.distanceTo(P);
+  NM.player.mesh.traverse(m=>{
+    if(m.isMesh&&m.material){
+      const tgt = camDist2player < 2.5 ? Math.max(0,(camDist2player-1)/1.5) : 1;
+      m.material.transparent=true;
+      m.material.opacity=lerp(m.material.opacity||1,tgt,0.15);
+    }
+  });
+}
+
+// Simple AABB ray test for camera occlusion
+function isCamPathClear(from, to) {
+  const dir = new THREE.Vector3().subVectors(to,from);
+  const len = dir.length();
+  dir.normalize();
+  for (const c of NM.colliders) {
+    // Only test thick colliders (walls/floors), skip thin slabs
+    if ((c.maxY-c.minY)<0.8 && (c.maxX-c.minX)>10) continue; // wide flat ground
+    // Slab test along ray
+    const tMinX = ((dir.x>0?c.minX:c.maxX)-from.x)/(dir.x||0.0001);
+    const tMaxX = ((dir.x>0?c.maxX:c.minX)-from.x)/(dir.x||0.0001);
+    const tMinZ = ((dir.z>0?c.minZ:c.maxZ)-from.z)/(dir.z||0.0001);
+    const tMaxZ = ((dir.z>0?c.maxZ:c.minZ)-from.z)/(dir.z||0.0001);
+    const tMinY = ((dir.y>0?c.minY:c.maxY)-from.y)/(dir.y||0.0001);
+    const tMaxY = ((dir.y>0?c.maxY:c.minY)-from.y)/(dir.y||0.0001);
+    const tEnter = Math.max(tMinX,tMinZ,tMinY);
+    const tExit  = Math.min(tMaxX,tMaxZ,tMaxY);
+    if (tEnter<tExit && tEnter>0.2 && tEnter<len-0.2) return false;
+  }
+  return true;
+}
+
+function cycleCamMode() {
+  NM.camMode=(NM.camMode+1)%4;
+  const d=[3.5,6,11,0]; NM.camDist=d[NM.camMode]||NM.camDist;
+  const labels=['CLOSE','MEDIUM','FAR','FPS'];
+  showNotif(labels[NM.camMode]+' VIEW');
+  NM.camPitch=NM.CAM_PRESETS[NM.camMode][1];
+}
+
+// ══════════════════════════════════════════════════════════════
+//  MINIMAP
+// ══════════════════════════════════════════════════════════════
+function initMinimap() {
+  const canvas = document.createElement('canvas');
+  canvas.id = 'minimap';
+  canvas.width = 140; canvas.height = 140;
+  canvas.style.cssText = `
+    position:fixed; bottom:18px; right:18px; width:140px; height:140px;
+    border:1px solid rgba(232,201,126,0.4); border-radius:4px;
+    background:rgba(0,0,0,0.65); z-index:20; pointer-events:none;
+  `;
+  document.body.appendChild(canvas);
+  NM._minimapCanvas = canvas;
+}
+
+function updateMinimap() {
+  const canvas = NM._minimapCanvas;
+  if (!canvas || !NM.player) return;
+  const ctx = canvas.getContext('2d');
+  const W=140, H=140;
+  const WORLD=90; // world is ~90x90 units
+  const scale = W/WORLD;
+  const ox = W/2, oz = H/2;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillRect(0,0,W,H);
+
+  // Draw colliders as map tiles
+  for (const c of NM.colliders) {
+    const sx = ox + c.minX*scale;
+    const sz = oz + c.minZ*scale;
+    const sw = (c.maxX-c.minX)*scale;
+    const sh = (c.maxZ-c.minZ)*scale;
+    const h  = c.maxY - c.minY;
+    // Colour by height
+    if (h>3) ctx.fillStyle='rgba(80,60,100,0.9)';        // tall wall
+    else if (c.maxY>2) ctx.fillStyle='rgba(100,80,50,0.8)'; // platform
+    else ctx.fillStyle='rgba(50,45,60,0.9)';              // ground
+    ctx.fillRect(sx, sz, sw, sh);
+  }
+
+  // Draw enemies
+  NM.enemies.forEach(e=>{
+    if(e.state==='DEAD') return;
+    const ex = ox+e.mesh.position.x*scale;
+    const ez = oz+e.mesh.position.z*scale;
+    ctx.beginPath();
+    ctx.arc(ex,ez,3,0,Math.PI*2);
+    ctx.fillStyle = e.isTarget ? '#ff4400' : (e.state==='PATROL'?'#ffaa44':'#ff0000');
+    ctx.fill();
+  });
+
+  // Draw player
+  const px=ox+NM.player.mesh.position.x*scale;
+  const pz=oz+NM.player.mesh.position.z*scale;
+  ctx.beginPath(); ctx.arc(px,pz,4,0,Math.PI*2);
+  ctx.fillStyle='#88ccff'; ctx.fill();
+  // Player facing arrow
+  const a=NM.player.facingAngle||0;
+  ctx.beginPath();
+  ctx.moveTo(px+Math.sin(a)*8, pz+Math.cos(a)*8);
+  ctx.lineTo(px+Math.sin(a-2)*4, pz+Math.cos(a-2)*4);
+  ctx.lineTo(px+Math.sin(a+2)*4, pz+Math.cos(a+2)*4);
+  ctx.closePath();
+  ctx.fillStyle='#ffffff'; ctx.fill();
+
+  // Camera direction indicator (arc)
+  ctx.beginPath();
+  ctx.arc(px,pz,10, -NM.camYaw-0.4, -NM.camYaw+0.4);
+  ctx.strokeStyle='rgba(232,201,126,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  // Label
+  ctx.fillStyle='rgba(232,201,126,0.5)';
+  ctx.font='8px monospace';
+  ctx.fillText('MAP',4,10);
+}
+
 function buildCharacter(options = {}) {
   const {
     bodyColor = 0x1a1a1a, headColor = 0x1a1a1a,
@@ -1035,379 +1628,6 @@ function gameLoop() {
 // ══════════════════════════════════════════════════════════════
 //  COLLISION RESOLUTION — AABB sweep
 // ══════════════════════════════════════════════════════════════
-function resolveCollision(pos, radius, yVel) {
-  // pos = desired new position (THREE.Vector3)
-  // radius = horizontal capsule radius
-  // Returns { pos, hitX, hitY, hitZ, surfaceY }
-
-  const result = { pos: pos.clone(), hitX: false, hitY: false, hitZ: false };
-  const CHAR_H = 1.8;   // character standing height
-  const STEP   = 0.42;  // max step-up height (climb small obstacles)
-  const colliders = NM.colliders || [];
-
-  // We test each axis independently for clean sliding
-  for (const c of colliders) {
-    const px = result.pos.x, py = result.pos.y, pz = result.pos.z;
-
-    // Expand collider by character radius
-    const ex = c.minX - radius, eX = c.maxX + radius;
-    const ez = c.minZ - radius, eZ = c.maxZ + radius;
-    const ey = c.minY,          eY = c.maxY;   // top surface
-
-    // Is character AABB overlapping this collider?
-    const overlapX = px > ex && px < eX;
-    const overlapZ = pz > ez && pz < eZ;
-    const overlapY = py < eY + CHAR_H && py + CHAR_H > ey;
-
-    if (!overlapX || !overlapZ || !overlapY) continue;
-
-    // ── Top surface (stand on top) ──
-    // If feet are near the top surface and moving down
-    if (py >= eY - STEP && yVel <= 0.1) {
-      result.pos.y = eY;
-      result.hitY = true;
-      continue;
-    }
-
-    // ── Side collision ──
-    // Find minimum penetration axis (X or Z) and push out that way
-    const penLeft  = eX - px;  // push right
-    const penRight = px - ex;  // push left
-    const penFront = eZ - pz;  // push forward
-    const penBack  = pz - ez;  // push backward
-
-    const minPenX = Math.min(penLeft, penRight);
-    const minPenZ = Math.min(penFront, penBack);
-
-    if (minPenX < minPenZ) {
-      // Resolve on X axis
-      result.pos.x = penLeft < penRight ? c.maxX + radius : c.minX - radius;
-      result.hitX = true;
-    } else {
-      // Resolve on Z axis
-      result.pos.z = penFront < penBack ? c.maxZ + radius : c.minZ - radius;
-      result.hitZ = true;
-    }
-  }
-
-  // Hard ground floor
-  if (result.pos.y <= 0) {
-    result.pos.y = 0;
-    result.hitY = true;
-  }
-
-  // Level bounds (outer walls, hard clamp)
-  const B = NM.levelBounds;
-  if (result.pos.x < B.minX + radius) { result.pos.x = B.minX + radius; result.hitX = true; }
-  if (result.pos.x > B.maxX - radius) { result.pos.x = B.maxX - radius; result.hitX = true; }
-  if (result.pos.z < B.minZ + radius) { result.pos.z = B.minZ + radius; result.hitZ = true; }
-  if (result.pos.z > B.maxZ - radius) { result.pos.z = B.maxZ - radius; result.hitZ = true; }
-
-  return result;
-}
-
-// Simple enemy collision (2D only, no jumping)
-function resolveEnemyCollision(pos, radius) {
-  const result = pos.clone();
-  const colliders = NM.colliders || [];
-  for (const c of colliders) {
-    const ex = c.minX - radius, eX = c.maxX + radius;
-    const ez = c.minZ - radius, eZ = c.maxZ + radius;
-    if (result.x <= ex || result.x >= eX) continue;
-    if (result.z <= ez || result.z >= eZ) continue;
-    if (c.minY > 0.5) continue; // skip elevated platforms for AI nav
-    const penLeft  = eX - result.x;
-    const penRight = result.x - ex;
-    const penFront = eZ - result.z;
-    const penBack  = result.z - ez;
-    const minPenX  = Math.min(penLeft, penRight);
-    const minPenZ  = Math.min(penFront, penBack);
-    if (minPenX < minPenZ) {
-      result.x = penLeft < penRight ? c.maxX + radius : c.minX - radius;
-    } else {
-      result.z = penFront < penBack ? c.maxZ + radius : c.minZ - radius;
-    }
-  }
-  const B = NM.levelBounds;
-  result.x = clamp(result.x, B.minX + radius, B.maxX - radius);
-  result.z = clamp(result.z, B.minZ + radius, B.maxZ - radius);
-  return result;
-}
-
-function spawnDoubleJumpFX(pos) {
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2;
-    const geo = new THREE.SphereGeometry(0.05, 3, 3);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x88ccff });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(pos);
-    mesh.position.y += 0.3;
-    NM.scene.add(mesh);
-    NM.particles.push({
-      mesh,
-      vel: new THREE.Vector3(Math.cos(angle)*3, 1, Math.sin(angle)*3),
-      life: 0.6, maxLife: 0.6, gravity: true, type: 'spark'
-    });
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  PLAYER UPDATE
-// ══════════════════════════════════════════════════════════════
-function updatePlayer(dt) {
-  const P = NM.player;
-  if (!P || P.hp <= 0) return;
-
-  P.animTime += dt;
-  P.attackTimer = Math.max(0, P.attackTimer - dt);
-  P.attackCooldown = Math.max(0, P.attackCooldown - dt);
-  P.invincibleTimer = Math.max(0, P.invincibleTimer - dt);
-  P.comboTimer = Math.max(0, P.comboTimer - dt);
-  if (P.comboTimer === 0) P.comboCount = 0;
-
-  if (P.isStealthKilling) {
-    P.stealthKillTimer -= dt;
-    if (P.stealthKillTimer <= 0) { P.isStealthKilling = false; }
-    return;
-  }
-
-  // ── Movement ──
-  // Camera-relative movement vectors (flat, ignore pitch)
-  // camFwd = direction camera is LOOKING projected onto XZ plane
-  const camFwd  = new THREE.Vector3( Math.sin(NM.camYaw), 0,  Math.cos(NM.camYaw)).normalize();
-  const camRight = new THREE.Vector3( Math.cos(NM.camYaw), 0, -Math.sin(NM.camYaw)).normalize();
-
-  let moveX = 0, moveZ = 0;
-  // Keyboard — W moves TOWARD camera look target (into screen)
-  if (NM.keys['w'] || NM.keys['arrowup'])    { moveX += camFwd.x;  moveZ += camFwd.z;  }
-  if (NM.keys['s'] || NM.keys['arrowdown'])  { moveX -= camFwd.x;  moveZ -= camFwd.z;  }
-  if (NM.keys['a'] || NM.keys['arrowleft'])  { moveX += camRight.x; moveZ += camRight.z; }
-  if (NM.keys['d'] || NM.keys['arrowright']) { moveX -= camRight.x; moveZ -= camRight.z; }
-  // Joystick — jz negative = stick up = forward, jx positive = stick right = move right
-  if (NM.joystick.active) {
-    const jx = NM.joystick.dx, jz = NM.joystick.dy;
-    moveX += camFwd.x * (-jz) - camRight.x * jx;
-    moveZ += camFwd.z * (-jz) - camRight.z * jx;
-  }
-
-  P.isCrouching = NM.keys['shift'] && !NM.keys['control'];
-
-  // Sprint — held Shift on mobile btn-sprint, or Ctrl on keyboard, consumes stamina
-  const wantSprint = (NM.keys['control'] || NM.btnState.sprint) && !P.isCrouching;
-  const moving = (moveX*moveX + moveZ*moveZ) > 0.01;
-  if (wantSprint && moving && P.sprint > 0) {
-    P.isSprinting = true;
-    P.sprint = Math.max(0, P.sprint - dt * 28);
-  } else {
-    P.isSprinting = false;
-    if (!wantSprint || !moving) P.sprint = Math.min(P.maxSprint, P.sprint + dt * 15);
-  }
-
-  const spd = P.isAttacking ? P.speed * 0.25
-            : P.isSprinting ? P.speed * 1.95
-            : P.isCrouching ? P.speed * 0.38
-            : P.speed;
-
-  const len = Math.sqrt(moveX*moveX + moveZ*moveZ);
-  if (len > 0.01) {
-    moveX /= len; moveZ /= len;
-    P.facingAngle = Math.atan2(moveX, moveZ);
-    P.velocity.x = moveX * spd;
-    P.velocity.z = moveZ * spd;
-  } else {
-    P.velocity.x *= 0.82;
-    P.velocity.z *= 0.82;
-  }
-
-  // ── Gravity / Jump ──
-  P.yVel -= 20 * dt;
-  if (P.yVel < -22) P.yVel = -22;
-
-  // Jump input — consume immediately so it can't fire twice in same frame
-  const jumpPressed = NM.btnState.jumpJustPressed || (NM.keys[' '] && !P._spaceWasDown);
-  P._spaceWasDown = NM.keys[' '];
-  NM.btnState.jumpJustPressed = false;
-
-  if (jumpPressed && P.jumpsLeft > 0) {
-    const isDouble = P.jumpsLeft === 1;  // second jump
-    P.yVel = isDouble ? 7.0 : 9.5;
-    P.jumpsLeft--;
-    P.onGround = false;
-    sfxJump();
-    if (isDouble) {
-      // Double jump visual burst
-      spawnDoubleJumpFX(P.mesh.position.clone());
-      showNotif('✦ DOUBLE JUMP', false);
-    }
-  }
-
-  // Apply movement with collision
-  const newPos = P.mesh.position.clone();
-  newPos.x += P.velocity.x * dt;
-  newPos.z += P.velocity.z * dt;
-  newPos.y += P.yVel * dt;
-
-  // Resolve collisions
-  const resolved = resolveCollision(newPos, 0.35, P.yVel);
-  P.mesh.position.copy(resolved.pos);
-  if (resolved.hitY) {
-    const wasAirborne = !P.onGround;
-    P.yVel = 0;
-    P.onGround = true;
-    if (wasAirborne) P.jumpsLeft = 2;  // restore double jump on landing
-  } else {
-    P.onGround = false;
-  }
-  if (resolved.hitX) P.velocity.x = 0;
-  if (resolved.hitZ) P.velocity.z = 0;
-
-  // ── Facing ──
-  const tAngle = P.facingAngle;
-  P.mesh.rotation.y = lerpAngle(P.mesh.rotation.y, tAngle, 18*dt);
-
-  // ── Blocking ──
-  P.isBlocking = (NM.keys['k'] || NM.btnState.block) && !P.isAttacking && P.onGround;
-
-  // ── Attack input ──
-  const attackPressed = NM.keys['j'] || NM.btnState.attackJustPressed;
-  if (attackPressed) {
-    NM.keys['j'] = false;
-    NM.btnState.attackJustPressed = false;
-
-    // Check stealth kill
-    const nearEnemy = getStealthTarget();
-    if (nearEnemy) {
-      doStealthKill(nearEnemy);
-    } else if (!P.isAttacking && P.attackCooldown <= 0) {
-      doAttack();
-    }
-  }
-
-  // ── Attack animation ──
-  if (P.isAttacking) {
-    P.attackTimer -= dt;
-    const total = 0.42;
-    const prog = 1 - P.attackTimer / total;
-    const swingArm = P.mesh._swordArm;
-    if (swingArm) {
-      if (prog < 0.25) {
-        // Wind-up: raise arm back
-        const t = prog / 0.25;
-        swingArm.rotation.x = lerp(0, -2.2, t);
-        swingArm.rotation.z = lerp(0, -0.3, t);
-      } else {
-        // Slash forward + down — fast
-        const t = (prog - 0.25) / 0.75;
-        const ease = 1 - Math.pow(1-t, 2);
-        swingArm.rotation.x = lerp(-2.2, 1.6, ease);
-        swingArm.rotation.z = lerp(-0.3, 0.2, ease);
-      }
-    }
-    // Body lean forward on swing
-    if (P.mesh._head) {
-      P.mesh._head.rotation.x = prog > 0.25 ? lerp(0, 0.3, (prog-0.25)/0.75) : 0;
-    }
-    if (P.attackTimer <= 0) {
-      P.isAttacking = false;
-      P.attackCooldown = 0.15;
-      // Reset arm
-      if (swingArm) { swingArm.rotation.x = 0; swingArm.rotation.z = 0; }
-      if (P.mesh._head) P.mesh._head.rotation.x = 0;
-    }
-  }
-
-  // ── Animate ──
-  animateCharacter(P, dt, len > 0.01);
-
-  // ── Walk sound ──
-  if (len > 0.01 && P.onGround && !P.isCrouching) {
-    P._walkTimer = (P._walkTimer||0) - dt;
-    if (P._walkTimer <= 0) { sfxFootstep(0.1); P._walkTimer = 0.35; }
-  }
-
-  // ── Ki regen ──
-  P.ki = Math.min(P.maxKi, P.ki + dt * 8);
-
-  // ── Stealth ──
-  updateStealthState(P);
-}
-
-function getStealthTarget() {
-  const P = NM.player;
-  for (const e of NM.enemies) {
-    if (e.state === 'DEAD') continue;
-    if (e.state !== 'PATROL' && e.state !== 'SUSPICIOUS') continue;
-    const d = P.mesh.position.distanceTo(e.mesh.position);
-    if (d < 1.8) return e;
-  }
-  return null;
-}
-
-function doStealthKill(enemy) {
-  const P = NM.player;
-  P.isStealthKilling = true;
-  P.stealthKillTimer = 1.2;
-  P.mesh.position.copy(enemy.mesh.position);
-  P.mesh.position.z += 0.5;
-  P.mesh.rotation.y = enemy.mesh.rotation.y + Math.PI;
-
-  sfxStealthKill();
-  spawnBlood(enemy.mesh.position, 15, true);
-
-  // Kill after brief delay
-  setTimeout(() => {
-    if (enemy.state !== 'DEAD') {
-      enemy.state = 'DEAD';
-      enemy.hp = 0;
-      killEnemy(enemy);
-      NM.score += 500;
-      NM.stealthKills++;
-      addScore(500);
-      showNotif('STEALTH KILL +500', false);
-    }
-  }, 600);
-}
-
-function doAttack() {
-  const P = NM.player;
-  P.isAttacking = true;
-  P.attackTimer = 0.35;
-  P.comboCount++;
-  P.comboTimer = 0.8;
-
-  sfxSwordSwing();
-
-  // Damage enemies in range
-  const range = 2.2;
-  const angleRange = Math.PI * 0.8;
-  NM.enemies.forEach(e => {
-    if (e.state === 'DEAD') return;
-    const toEnemy = new THREE.Vector3().subVectors(e.mesh.position, P.mesh.position);
-    const dist = toEnemy.length();
-    if (dist > range) return;
-
-    // Angle check
-    const playerFwd = new THREE.Vector3(Math.sin(P.mesh.rotation.y), 0, Math.cos(P.mesh.rotation.y));
-    const angle = Math.acos(clamp(playerFwd.dot(toEnemy.clone().normalize()), -1, 1));
-    if (angle > angleRange) return;
-
-    // Check block
-    if (e.isBlocking && e.blockCooldown <= 0) {
-      sfxBlock();
-      spawnSpark(e.mesh.position.clone().add(new THREE.Vector3(0,1,0)));
-      e.blockCooldown = 1.5;
-      // Alert enemy
-      e.state = 'ATTACK';
-      e.alertLevel = 1;
-      return;
-    }
-
-    const dmg = 20 + P.comboCount * 5;
-    hitEnemy(e, dmg);
-    alertNearby(e.mesh.position, 10);
-  });
-}
-
 function hitEnemy(e, dmg) {
   if (e.state === 'DEAD') return;
   e.hp -= dmg;
@@ -1782,80 +2002,6 @@ function animateCharacter(c, dt, isMoving) {
 
 // ══════════════════════════════════════════════════════════════
 //  CAMERA
-// ══════════════════════════════════════════════════════════════
-function updateCamera(dt) {
-  if (!NM.player) return;
-
-  const P = NM.player.mesh.position;
-  const preset = NM.CAM_PRESETS[NM.camMode];
-  const targetDist  = preset[0];
-  const targetPitch = preset[1];
-  const targetFov   = preset[2];
-
-  // Smooth yaw from mouse/touch drag
-  NM.camYaw   -= NM.mouse.dx * 0.003;
-  NM.camPitch  = clamp(NM.camPitch - NM.mouse.dy * 0.003, -0.08, 0.72);
-  NM.mouse.dx  = 0;
-  NM.mouse.dy  = 0;
-
-  // Smoothly blend pitch toward preset when not dragging
-  NM.camPitch = lerp(NM.camPitch, targetPitch, dt * 1.2);
-
-  // Smooth distance
-  NM.camDist = lerp(NM.camDist, targetDist, dt * 5);
-
-  // FOV transition
-  NM.camera.fov = lerp(NM.camera.fov, targetFov, dt * 6);
-  NM.camera.updateProjectionMatrix();
-
-  // FPS mode
-  if (NM.camMode === 3) {
-    // Place camera at head level, facing where player faces
-    const eyeY = P.y + 1.6;
-    NM.camTarget.set(P.x, eyeY, P.z);
-    NM.camera.position.lerp(new THREE.Vector3(P.x, eyeY, P.z), dt * 30);
-    const lookDir = new THREE.Vector3(
-      Math.sin(NM.camYaw),
-      -Math.sin(NM.camPitch),
-      Math.cos(NM.camYaw)
-    );
-    NM.camera.lookAt(P.x + lookDir.x*10, eyeY + lookDir.y*10, P.z + lookDir.z*10);
-    // Hide player mesh in FPS
-    NM.player.mesh.visible = false;
-    return;
-  }
-
-  // Show player in all other modes
-  if (NM.player.mesh) NM.player.mesh.visible = true;
-
-  // Follow target with offset
-  const followTarget = new THREE.Vector3(P.x, P.y + 1.3, P.z);
-  NM.camTarget.lerp(followTarget, dt * 12);
-
-  // Orbit position
-  const camPos = new THREE.Vector3(
-    NM.camTarget.x - Math.sin(NM.camYaw) * Math.cos(NM.camPitch) * NM.camDist,
-    NM.camTarget.y + Math.sin(NM.camPitch) * NM.camDist + (NM.camMode === 0 ? 0.5 : 0),
-    NM.camTarget.z - Math.cos(NM.camYaw) * Math.cos(NM.camPitch) * NM.camDist
-  );
-
-  // Ground clamp
-  if (camPos.y < 0.5) camPos.y = 0.5;
-
-  NM.camera.position.lerp(camPos, dt * 12);
-  NM.camera.lookAt(NM.camTarget);
-}
-
-function cycleCamMode() {
-  NM.camMode = (NM.camMode + 1) % 4;
-  const labels = ['CLOSE', 'MEDIUM', 'FAR', 'FPS'];
-  showNotif(labels[NM.camMode] + ' VIEW');
-  // Snap pitch toward preset immediately
-  NM.camPitch = NM.CAM_PRESETS[NM.camMode][1];
-}
-
-// ══════════════════════════════════════════════════════════════
-//  PARTICLES
 // ══════════════════════════════════════════════════════════════
 function spawnBlood(pos, count, big) {
   for (let i=0; i<count; i++) {

@@ -29,6 +29,28 @@
   #stealth-indicator { position: absolute; top: 80px; right: 18px; font-size: 11px; letter-spacing: 2px; text-shadow: 0 0 8px currentColor; transition: color 0.5s; }
   #objective { position: absolute; bottom: 140px; right: 18px; color: #ccc; font-size: 11px; letter-spacing: 1px; text-align: right; line-height: 1.8; }
   #kills-display { position: absolute; top: 110px; right: 18px; color: #aaa; font-size: 11px; letter-spacing: 1px; }
+  #zone-hint { position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%); color: rgba(232,201,126,0.75); font-size: 12px; letter-spacing: 3px; text-align: center; text-transform: uppercase; pointer-events:none; text-shadow:0 0 12px rgba(232,201,126,0.5); opacity:0; transition: opacity 0.5s; }
+
+  /* Landscape mobile overrides */
+  @media screen and (orientation: landscape) and (max-height: 500px) {
+    #health-bar-wrap { top: 10px; left: 10px; }
+    #health-bar-bg { width: 120px; height: 8px; }
+    #ki-bar-wrap { top: 36px; left: 10px; }
+    #ki-bar-bg { width: 90px; }
+    #sprint-bar-wrap { top: 56px; left: 10px; }
+    #sprint-bar-bg { width: 80px; }
+    #score-display { top: 10px; right: 10px; font-size: 11px; }
+    #stealth-indicator { top: 58px; right: 10px; font-size: 10px; }
+    #kills-display { top: 76px; right: 10px; font-size: 10px; }
+    #objective { bottom: 110px; right: 10px; font-size: 10px; }
+    #joystick-zone { width: 100px; height: 100px; bottom: 10px; left: 10px; }
+    #joystick-base { width: 100px; height: 100px; }
+    #action-buttons { bottom: 10px; right: 10px; gap: 6px; }
+    .action-btn { width: 46px; height: 46px; font-size: 10px; }
+    #minimap { width: 110px; height: 110px; bottom: 10px; right: 64px; }
+    #pause-btn { top: 8px; }
+    #cam-btn { top: 8px; }
+  }
 
   /* ── Alert flash ── */
   #alert-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,50,0,0.15); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -210,10 +232,11 @@
     </div>
     <div id="stealth-indicator">● SHADOW</div>
     <div id="kills-display">Kills: 0 / 4</div>
-    <div id="objective">⬧ Eliminate Lord Hayamoto</div>
+    <div id="objective">⬧ ELIMINATE BOSS GUARD<br>⬧ TEST YOUR SKILLS</div>
     <button id="pause-btn" style="pointer-events:all">❙❙</button>
     <button id="cam-btn" style="pointer-events:all;position:absolute;top:14px;left:calc(50% + 46px);width:36px;height:36px;background:rgba(0,0,0,0.5);border:1px solid #e8c97e44;border-radius:50%;color:#e8c97e;font-size:9px;letter-spacing:1px;cursor:pointer;font-family:serif;">CAM</button>
     <div id="stealth-prompt">⬧ STEALTH KILL ⬧<br><span style="font-size:10px;letter-spacing:2px">Press Attack</span></div>
+    <div id="zone-hint"></div>
     <div id="alert-flash"></div>
   </div>
 </div>
@@ -516,186 +539,114 @@ function initThree() {
 //  LEVEL BUILDER — Jade Pagoda Night
 // ══════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════════
-//  LEVEL — Jade Pagoda District (much larger, open, platforming)
+//  LEVEL — Training Ground (test stage)
 // ══════════════════════════════════════════════════════════════
 function buildLevel() {
   const S = NM.scene;
-  NM.colliders = [];   // always start fresh
+  NM.colliders = [];
 
-  const stoneMat   = new THREE.MeshLambertMaterial({ color: 0x2a2535 });
-  const darkWoodMat= new THREE.MeshLambertMaterial({ color: 0x1a0f08 });
-  const redWoodMat = new THREE.MeshLambertMaterial({ color: 0x5a1a0a });
-  const tileMat    = new THREE.MeshLambertMaterial({ color: 0x1a1520 });
-  const wallMat    = new THREE.MeshLambertMaterial({ color: 0x221a28 });
-  const goldMat    = new THREE.MeshLambertMaterial({ color: 0x8a6a1a, emissive:0x1a0f00, emissiveIntensity:0.3 });
-  const woodMat    = new THREE.MeshLambertMaterial({ color: 0x2a1808 });
-  const liftMat    = new THREE.MeshLambertMaterial({ color: 0x3a2818 });
+  const stone  = new THREE.MeshLambertMaterial({ color: 0x2a2535 });
+  const dark   = new THREE.MeshLambertMaterial({ color: 0x18120e });
+  const red    = new THREE.MeshLambertMaterial({ color: 0x5a1a0a });
+  const gold   = new THREE.MeshLambertMaterial({ color: 0x8a6a1a, emissive:0x1a0f00, emissiveIntensity:0.3 });
+  const tile   = new THREE.MeshLambertMaterial({ color: 0x1a1520 });
+  const woodMat= new THREE.MeshLambertMaterial({ color: 0x2a1808 });
 
-  // ── Ground (large open courtyard) ──
-  solid(S, 90, 0.5, 90,   0, -0.25, 0, stoneMat); // main ground
-  // Tile decoration (no collision)
-  for (let x=-6; x<=6; x++) for (let z=-6; z<=6; z++) {
-    if ((x+z)%2===0) decor(S, 3.8, 0.05, 3.8, x*7, 0.02, z*7, tileMat);
-  }
+  // ── Ground ──
+  solid(S, 120, 0.5, 120,  0, -0.25, 0, stone);
 
-  // ── Outer Boundary walls  ──
-  // North
-  solid(S, 90, 5, 1.5,   0, 2.5, -44, wallMat);
-  // South
-  solid(S, 90, 5, 1.5,   0, 2.5,  44, wallMat);
-  // East
-  solid(S, 1.5, 5, 90,   44, 2.5,   0, wallMat);
-  // West
-  solid(S, 1.5, 5, 90,  -44, 2.5,   0, wallMat);
+  // Decorative tile grid
+  for (let x=-7;x<=7;x++) for(let z=-7;z<=7;z++)
+    if((x+z)%2===0) decor(S, 4,0.04,4, x*8,0.02,z*8, tile);
 
-  // Walkable wall tops (platforms on perimeter)
-  solid(S, 90, 0.5, 1.5,  0,  5,  -44, stoneMat);  // walk on top of N wall
-  solid(S, 90, 0.5, 1.5,  0,  5,   44, stoneMat);
-  solid(S, 1.5, 0.5, 90, 44,  5,    0, stoneMat);
-  solid(S, 1.5, 0.5, 90,-44,  5,    0, stoneMat);
+  // ── ZONE A: Stealth Kill Zone (south-west) ──
+  // 3 standing guards on a lit courtyard
+  // Low dividing wall for approach cover
+  solid(S, 12,1.2,0.5, -20,0.6,-8, stone);
+  solid(S, 0.5,1.2,8,  -14,0.6,-4, stone);
+  // Lanterns marking the zone
+  addLantern(S, -24,0,-14);
+  addLantern(S, -16,0,-14);
 
-  // ── PAGODA (far north-centre) ──
-  const PX = 0, PZ = -32;
-  // Base platform (wide, climbable)
-  solid(S, 18, 1.5, 18, PX, 0.75, PZ, stoneMat);
-  // Steps up to platform
-  for (let i=0;i<4;i++) solid(S, 14-i*2, 0.4, 1.5, PX, 1.5+i*0.4, PZ+9-i*1.4, stoneMat);
+  // ── ZONE B: Low Platforms — jump on top of walls ──
+  // A row of platforms of increasing height to practice jumping on them
+  solid(S, 4,1.2,4,   8,0.6,-20, stone);   // h=1.2
+  solid(S, 4,2.0,4,  14,1.0,-20, stone);   // h=2.0
+  solid(S, 4,2.8,4,  20,1.4,-20, stone);   // h=2.8  (need double jump)
+  solid(S, 4,3.6,4,  26,1.8,-20, stone);   // h=3.6  (definitely double jump)
+  solid(S, 4,4.4,4,  32,2.2,-20, stone);   // h=4.4  (wall-jump assist needed)
+  // Connecting bridge at top for reward
+  solid(S, 28,0.4,3, 20,4.45,-20, stone);
+  addLantern(S, 32,4.5,-20);
 
-  // Floor 1 — open pillar hall
-  const pils = [[-5,-5],[5,-5],[-5,5],[5,5]];
-  pils.forEach(([ox,oz])=> solid(S, 0.9,7, 0.9, PX+ox, 4.5, PZ+oz, darkWoodMat));
-  // Floor 1 platform top
-  solid(S, 12, 0.4, 12, PX, 8.2, PZ, redWoodMat);
-  // Railing low walls
-  solid(S, 12, 0.6, 0.4, PX, 8.7, PZ-6, stoneMat);
-  solid(S, 12, 0.6, 0.4, PX, 8.7, PZ+6, stoneMat);
-  solid(S, 0.4, 0.6, 12, PX-6, 8.7, PZ, stoneMat);
-  solid(S, 0.4, 0.6, 12, PX+6, 8.7, PZ, stoneMat);
+  // ── ZONE C: Wall Jump Corridor ──
+  // Two long parallel walls, player practices bouncing between them
+  solid(S, 1.5,8,28,   2,4,-4, stone);   // LEFT wall
+  solid(S, 1.5,8,28,  10,4,-4, stone);   // RIGHT wall — 6 units apart
+  // Floor of the corridor
+  solid(S, 12,0.3,28,  6,0,-4, dark);
+  // Target platform at the top of the corridor
+  solid(S, 8,0.4,5,    6,8.5,8, gold);
+  addLantern(S, 6,8.5,8);
+  // Guide arrows (decorative raised lines)
+  decor(S, 0.2,0.1,26, 5,0.04,-4, tile);
+  decor(S, 0.2,0.1,26, 7,0.04,-4, tile);
 
-  // Floor 2 — smaller
-  solid(S, 8, 0.4, 8,  PX, 11, PZ, redWoodMat);
-  solid(S, 8, 0.4, 0.3, PX, 11.5, PZ-4, stoneMat);
-  solid(S, 8, 0.4, 0.3, PX, 11.5, PZ+4, stoneMat);
+  // ── ZONE D: Wall-to-Platform Challenge ──
+  // A tall wall next to a high platform — must wall-jump to reach it
+  solid(S, 1.5,10,6, -8,5,16, stone);     // tall wall
+  solid(S, 6,0.4,5,  -2,7,16, gold);      // high platform (must wall-jump to reach)
+  addLantern(S, -2,7,16);
+  // Stepping-stone approach
+  solid(S, 3,0.4,3, -14,1.2,14, stone);
+  solid(S, 3,0.4,3, -12,2.5,16, stone);
 
-  // Floor 3 — tiny top
-  solid(S, 5, 0.4, 5,  PX, 13.5, PZ, redWoodMat);
+  // ── ZONE E: Patrol Path (open area, enemies walk routes) ──
+  // Open north area with cover
+  solid(S, 6,1.2,0.5,  8,0.6,12, stone);
+  solid(S, 0.5,1.2,6,  16,0.6,8, stone);
+  solid(S, 6,1.2,0.5,  24,0.6,18, stone);
+  solid(S, 0.5,1.2,6,  -4,0.6,18, stone);
+  solid(S, 6,1.2,0.5,  -12,0.6,12, stone);
+  // Pagoda in far north as landmark
+  solid(S, 14,1,14,     0,0.5,35, stone);
+  solid(S, 10,0.4,10,   0,1.4,35, stone);
+  addPagodaRoof(S, 0,3,35, 12,2.5, red);
+  addPagodaRoof(S, 0,6,35,  8,2,   red);
+  decor(S, 0.3,3,0.3,   0,8.5,35, gold);
+  [[-5,0,30],[5,0,30],[-5,0,40],[5,0,40]].forEach(([x,y,z])=>addLantern(S,x,y,z));
 
-  // Roof tiers (visual only)
-  addPagodaRoof(S, PX, 9.5,  PZ, 13, 2.5, redWoodMat);
-  addPagodaRoof(S, PX, 12,   PZ,  9, 2,   redWoodMat);
-  addPagodaRoof(S, PX, 14.5, PZ,  6, 1.8, redWoodMat);
-  decor(S, 0.3, 3.5, 0.3, PX, 16.5, PZ, goldMat); // spire
+  // ── ZONE F: Outer boundary walls ──
+  solid(S, 120,6,1.5,    0,3,-59, stone);
+  solid(S, 120,6,1.5,    0,3, 59, stone);
+  solid(S, 1.5,6,120,   59,3,  0, stone);
+  solid(S, 1.5,6,120,  -59,3,  0, stone);
+  // Walkable tops
+  solid(S, 120,0.4,1.5,  0,6.2,-59, stone);
+  solid(S, 120,0.4,1.5,  0,6.2, 59, stone);
+  solid(S, 1.5,0.4,120, 59,6.2,  0, stone);
+  solid(S, 1.5,0.4,120,-59,6.2,  0, stone);
 
-  // Pagoda side access ramps / platforms
-  solid(S, 4, 0.4, 4, PX-10, 2,   PZ+4,  stoneMat); // left mid
-  solid(S, 4, 0.4, 4, PX+10, 2,   PZ+4,  stoneMat); // right mid
-  solid(S, 4, 0.4, 4, PX-10, 5,   PZ,    stoneMat); // left high
-  solid(S, 4, 0.4, 4, PX+10, 5,   PZ,    stoneMat); // right high
-  solid(S, 4, 0.4, 4, PX-10, 8,   PZ-4,  stoneMat); // left highest
-  solid(S, 4, 0.4, 4, PX+10, 8,   PZ-4,  stoneMat); // right highest
+  // ── ZONE LABELS (sign posts — decor only) ──
+  decor(S,0.1,2,0.1, -20,1,-5, woodMat); // stealth zone marker
+  decor(S,0.1,2,0.1,   8,0,  -16, woodMat);
+  decor(S,0.1,2,0.1,   6,0,  -16, woodMat);
 
-  // ── EAST DISTRICT — Barracks / guard towers ──
-  // Barracks building
-  solid(S, 14, 0.5, 10, 28, 0.25, -15, stoneMat);
-  solid(S, 14, 4, 0.5,  28, 2.25, -20, wallMat);
-  solid(S, 14, 4, 0.5,  28, 2.25, -10, wallMat);
-  solid(S, 0.5, 4, 10,  21, 2.25, -15, wallMat);
-  solid(S, 0.5, 4, 10,  35, 2.25, -15, wallMat);
-  // Barracks roof (walkable)
-  solid(S, 14, 0.5, 10, 28, 4.25, -15, stoneMat);
+  // ── Trees & lanterns ──
+  [[-30,0,0],[30,0,0],[-30,0,-30],[30,0,-30],[-30,0,30],[30,0,30]].forEach(([x,y,z])=>addTree(S,x,y,z));
+  [[-20,0,4],[20,0,4],[0,0,-30],[-10,0,-30],[10,0,-30]].forEach(([x,y,z])=>addLantern(S,x,y,z));
 
-  // Barracks steps
-  solid(S, 4, 0.4, 1.5, 28, 0.7, -9.5, stoneMat);
-  solid(S, 4, 0.7, 1.5, 28, 1.1, -8.5, stoneMat);
-
-  // East elevated walkway
-  solid(S, 0.8, 4, 22, 38, 2, -10, stoneMat);         // wall
-  solid(S, 2, 0.5, 22, 38, 4.25, -10, stoneMat);      // walkway top
-  solid(S, 2, 0.5, 6,  32, 4.25, -20, stoneMat);      // cross bridge
-
-  // ── WEST DISTRICT — Temple courtyard ──
-  // Temple base
-  solid(S, 16, 1, 16, -28, 0.5, -10, stoneMat);
-  solid(S, 16, 0.5, 16, -28, 3.5, -10, redWoodMat); // temple roof/platform
-
-  // Temple steps
-  solid(S, 6, 0.4, 1.5, -28, 0.8, -2.5, stoneMat);
-  solid(S, 5, 0.7, 1.5, -28, 1.2, -1.5, stoneMat);
-  solid(S, 4, 1.0, 1.5, -28, 1.6, -0.7, stoneMat);
-
-  // Temple pillars
-  [[-6,-6],[ 6,-6],[-6,6],[6,6]].forEach(([ox,oz])=>
-    solid(S, 0.8, 5, 0.8, -28+ox, 2.5, -10+oz, darkWoodMat)
-  );
-
-  // West walkway
-  solid(S, 22, 0.5, 2, -32, 5, -10, stoneMat); // connects west wall to temple roof
-
-  // ── SOUTH DISTRICT — Garden & market ──
-  // Market stalls (platforms for parkour)
-  [[-15,0,20],[-7,0,22],[0,0,24],[7,0,22],[15,0,20]].forEach(([x,y,z],i)=>{
-    solid(S, 5, 0.5, 5,  x, 1.8+i%2*0.8, z, liftMat);
-    decor(S, 5, 3, 0.3,  x, 3.5+i%2*0.8, z-2.5, redWoodMat); // stall awning back
-  });
-  // Big garden platform (lower)
-  solid(S, 12, 0.4, 12, 0, 1.2, 30, stoneMat);
-  solid(S, 8, 0.4, 8,  0, 3,   30, stoneMat);   // raised centre
-  solid(S, 4, 0.4, 4,  0, 4.5, 30, stoneMat);   // top tier
-
-  // ── CENTRE FEATURES — parkour line north-south ──
-  // Stepping stones
-  const stones = [
-    [0,1.2,-5], [-4,2,-8], [4,2.8,-11], [0,3.5,-14],
-    [-5,4.2,-17], [5,5,-20], [0,5.8,-23], [0,7,-27],
-  ];
-  stones.forEach(([x,y,z])=> solid(S, 3, 0.4, 3, x, y, z, stoneMat));
-
-  // ── GUARD TOWERS (corners) ──
-  addTower(S, -40, 0, -40, stoneMat, goldMat);
-  addTower(S,  40, 0, -40, stoneMat, goldMat);
-  addTower(S, -40, 0,  40, stoneMat, goldMat);
-  addTower(S,  40, 0,  40, stoneMat, goldMat);
-
-  // ── COVER / LOW WALLS (combat cover) ──
-  const covers = [
-    [8, 1.2, 0.5,  -5, 0.6, -5],
-    [0.5, 1.2, 7,   10, 0.6,  2],
-    [5, 0.8, 0.5,   3, 0.4,  8],
-    [6, 1.5, 0.5,  -12, 0.75, -3],
-    [0.5, 1.5, 6,  14, 0.75, 5],
-    [4, 1, 0.5,     0, 0.5,  15],
-    [0.5, 1, 5,   -14, 0.5,  10],
-    [6, 1, 0.5,    20, 0.5,   0],
-  ];
-  covers.forEach(([w,h,d,x,y,z])=> solid(S, w,h,d, x,y,z, stoneMat));
-
-  // ── LANTERNS ──
-  const lanternPos = [
-    [-8,0,-8],[-8,0,0],[-8,0,8],[8,0,-8],[8,0,0],[8,0,8],
-    [0,0,-12],[0,0,6],[-5,0,-20],[5,0,-20],
-    [28,4,-15],[-28,3.5,-10],
-    [-15,0,20],[0,0,24],[15,0,20],
-    [0,3,30], [-4,4.5,30],[4,4.5,30],
-  ];
-  lanternPos.forEach(([x,y,z])=> addLantern(S,x,y,z));
-
-  // ── TREES ──
-  [[-20,0,5],[20,0,5],[-20,0,-8],[20,0,-8],
-   [-6,0,10],[6,0,10],[-18,0,25],[18,0,25],
-   [-25,0,-25],[25,0,-25],
-  ].forEach(([x,y,z])=> addTree(S,x,y,z));
-
-  // ── SKY ──
+  // ── Sky ──
   buildStarfield(S);
-  const moonMesh = new THREE.Mesh(
+  const moon = new THREE.Mesh(
     new THREE.SphereGeometry(5,16,16),
     new THREE.MeshBasicMaterial({color:0xd4c870})
   );
-  moonMesh.position.set(80,100,-120);
-  S.add(moonMesh);
+  moon.position.set(80,100,-120);
+  S.add(moon);
 
   NM.groundY = 0;
-  NM.levelBounds = { minX:-43, maxX:43, minZ:-43, maxZ:43 };
+  NM.levelBounds = { minX:-58, maxX:58, minZ:-58, maxZ:58 };
 }
 
 // Register a solid collider + add mesh
@@ -1126,6 +1077,9 @@ function updatePlayer(dt) {
   // ── Ki regen ──
   P.ki = Math.min(P.maxKi, P.ki+dt*8);
 
+  // ── Zone hints ──
+  updateZoneHint(P.mesh.position);
+
   // ── Stealth ──
   updateStealthState(P);
 }
@@ -1257,61 +1211,51 @@ function updateMinimap() {
   if (!canvas || !NM.player) return;
   const ctx = canvas.getContext('2d');
   const W=140, H=140;
-  const WORLD=90; // world is ~90x90 units
+  const WORLD=120; // world is ~120x120 units
   const scale = W/WORLD;
   const ox = W/2, oz = H/2;
 
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillStyle='rgba(0,0,0,0.75)';
   ctx.fillRect(0,0,W,H);
 
-  // Draw colliders as map tiles
+  // Draw colliders
   for (const c of NM.colliders) {
+    const h = c.maxY-c.minY;
+    if (h < 0.4) continue; // skip very thin ground slabs
     const sx = ox + c.minX*scale;
     const sz = oz + c.minZ*scale;
-    const sw = (c.maxX-c.minX)*scale;
-    const sh = (c.maxZ-c.minZ)*scale;
-    const h  = c.maxY - c.minY;
-    // Colour by height
-    if (h>3) ctx.fillStyle='rgba(80,60,100,0.9)';        // tall wall
-    else if (c.maxY>2) ctx.fillStyle='rgba(100,80,50,0.8)'; // platform
-    else ctx.fillStyle='rgba(50,45,60,0.9)';              // ground
-    ctx.fillRect(sx, sz, sw, sh);
+    const sw = Math.max(1,(c.maxX-c.minX)*scale);
+    const sh = Math.max(1,(c.maxZ-c.minZ)*scale);
+    if (h > 4)       ctx.fillStyle='rgba(100,60,140,0.9)';
+    else if (h > 1.5) ctx.fillStyle='rgba(90,70,50,0.8)';
+    else              ctx.fillStyle='rgba(50,45,60,0.85)';
+    ctx.fillRect(sx,sz,sw,sh);
   }
 
-  // Draw enemies
-  NM.enemies.forEach(e=>{
-    if(e.state==='DEAD') return;
-    const ex = ox+e.mesh.position.x*scale;
-    const ez = oz+e.mesh.position.z*scale;
-    ctx.beginPath();
-    ctx.arc(ex,ez,3,0,Math.PI*2);
-    ctx.fillStyle = e.isTarget ? '#ff4400' : (e.state==='PATROL'?'#ffaa44':'#ff0000');
+  // Enemies
+  NM.enemies.forEach(e => {
+    if (e.state==='DEAD') return;
+    const ex=ox+e.mesh.position.x*scale, ez=oz+e.mesh.position.z*scale;
+    ctx.beginPath(); ctx.arc(ex,ez,e.isTarget?4:2.5,0,Math.PI*2);
+    ctx.fillStyle = e.state==='PATROL' ? '#ffaa44' : '#ff2200';
     ctx.fill();
   });
 
-  // Draw player
+  // Player
   const px=ox+NM.player.mesh.position.x*scale;
   const pz=oz+NM.player.mesh.position.z*scale;
   ctx.beginPath(); ctx.arc(px,pz,4,0,Math.PI*2);
   ctx.fillStyle='#88ccff'; ctx.fill();
-  // Player facing arrow
   const a=NM.player.facingAngle||0;
   ctx.beginPath();
-  ctx.moveTo(px+Math.sin(a)*8, pz+Math.cos(a)*8);
-  ctx.lineTo(px+Math.sin(a-2)*4, pz+Math.cos(a-2)*4);
-  ctx.lineTo(px+Math.sin(a+2)*4, pz+Math.cos(a+2)*4);
-  ctx.closePath();
-  ctx.fillStyle='#ffffff'; ctx.fill();
+  ctx.moveTo(px+Math.sin(a)*7,pz+Math.cos(a)*7);
+  ctx.lineTo(px+Math.sin(a-2.3)*3.5,pz+Math.cos(a-2.3)*3.5);
+  ctx.lineTo(px+Math.sin(a+2.3)*3.5,pz+Math.cos(a+2.3)*3.5);
+  ctx.closePath(); ctx.fillStyle='#ffffff'; ctx.fill();
 
-  // Camera direction indicator (arc)
-  ctx.beginPath();
-  ctx.arc(px,pz,10, -NM.camYaw-0.4, -NM.camYaw+0.4);
-  ctx.strokeStyle='rgba(232,201,126,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
-
-  // Label
-  ctx.fillStyle='rgba(232,201,126,0.5)';
-  ctx.font='8px monospace';
+  // Labels
+  ctx.fillStyle='rgba(232,201,126,0.55)'; ctx.font='7px monospace';
   ctx.fillText('MAP',4,10);
 }
 
@@ -1492,7 +1436,7 @@ function spawnPlayer() {
     isPlayer:   true,     // triggers white hair + red neck band
     scale:      1
   });
-  mesh.position.set(0, 0, 8);
+  mesh.position.set(0, 0, 0);
 
   NM.player = {
     mesh,
@@ -1531,65 +1475,60 @@ function spawnEnemies() {
   NM.enemies = [];
   NM.kills = 0;
 
-  const spawnData = [
-    // [x, z, isTarget/boss, patrol points]
-    { x:-5, z:-3, isBoss:false, patrol:[{x:-5,z:-3},{x:5,z:-3},{x:5,z:5},{x:-5,z:5}] },
-    { x: 8, z:-10, isBoss:false, patrol:[{x:8,z:-10},{x:8,z:-20},{x:0,z:-20}] },
-    { x:-8, z:-10, isBoss:false, patrol:[{x:-8,z:-10},{x:-8,z:-20},{x:0,z:-15}] },
-    { x: 0, z:-22, isBoss:true, patrol:[{x:0,z:-22},{x:3,z:-20},{x:-3,z:-20}] }, // Boss
-  ];
-
-  spawnData.forEach((d, i) => {
+  // Helper: create one enemy
+  function makeEnemy(x, z, isBoss, patrol, isTarget=false) {
     const mesh = buildCharacter({
-      bodyColor: d.isBoss ? 0x2a0505 : 0x151515,
-      headColor: d.isBoss ? 0x1a0303 : 0x111111,
-      eyeColor: d.isBoss ? 0xff2200 : 0xff4400,
+      bodyColor:  isBoss ? 0x2a0505 : 0x151515,
+      headColor:  isBoss ? 0x1a0303 : 0x111111,
+      eyeColor:   isBoss ? 0xff2200 : 0xff6600,
       scarf: true,
-      scarfColor: d.isBoss ? 0x880000 : 0x441100,
-      isBoss: d.isBoss,
-      scale: d.isBoss ? 1.2 : 1
+      scarfColor: isBoss ? 0x880000 : 0x441100,
+      isBoss, scale: isBoss ? 1.2 : 1
     });
-    mesh.position.set(d.x, 0, d.z);
-
-    const enemy = {
-      mesh,
-      id: i,
-      isBoss: d.isBoss,
-      isTarget: d.isBoss,
-      hp: d.isBoss ? 150 : 60,
-      maxHp: d.isBoss ? 150 : 60,
-      speed: d.isBoss ? 3.5 : 3,
-      state: 'PATROL',     // PATROL | SUSPICIOUS | ALERT | CHASE | ATTACK | STUNNED | DEAD
-      alertLevel: 0,       // 0..1
-      vision: d.isBoss ? 14 : 10,
-      visionAngle: d.isBoss ? 120 : 90,
-      hearingRadius: d.isBoss ? 8 : 6,
-      patrol: d.patrol,
-      patrolIdx: 0,
-      patrolWait: 0,
+    mesh.position.set(x, 0, z);
+    const e = {
+      mesh, id: NM.enemies.length, isBoss, isTarget: isTarget||isBoss,
+      hp: isBoss?150:60, maxHp: isBoss?150:60,
+      speed: isBoss?3.2:2.8,
+      state: 'PATROL', alertLevel: 0,
+      vision: isBoss?14:10, visionAngle: isBoss?120:90, hearingRadius: isBoss?8:6,
+      patrol, patrolIdx:0, patrolWait: 1+Math.random(),
       lastKnownPlayer: new THREE.Vector3(),
-      searchTimer: 0,
-      attackCooldown: 0,
-      attackTimer: 0,
-      isAttacking: false,
-      isBlocking: false,
-      blockCooldown: 0.5 + Math.random() * 0.5,  // slight initial stagger
-      animTime: 0,
-      facingAngle: 0,
-      velocity: new THREE.Vector3(),
-      stunTimer: 0,
-      alertIcon: null,
-      // Health bar (HTML element)
-      hpBar: null,
+      searchTimer:0, attackCooldown:0, attackTimer:0,
+      isAttacking:false, isBlocking:false,
+      blockCooldown: 0.4+Math.random()*0.6,
+      animTime:0, facingAngle:0, velocity:new THREE.Vector3(),
+      alertIcon:null, hpBar:null,
     };
-
-    // Alert icon (! or ?)
-    createEnemyUI(enemy);
-
-    NM.enemies.push(enemy);
+    createEnemyUI(e);
+    NM.enemies.push(e);
     NM.scene.add(mesh);
-  });
+    return e;
+  }
+
+  // ── ZONE A: Stealth Kill targets — standing still, backs to player approach ──
+  makeEnemy(-24, -14, false, [{x:-24,z:-14}]);          // standing alone
+  makeEnemy(-19, -16, false, [{x:-19,z:-16}]);          // pair
+  makeEnemy(-16, -13, false, [{x:-16,z:-13}]);          // trio
+
+  // ── ZONE E: Patrol enemies in the open northern area ──
+  makeEnemy(10, 12, false, [
+    {x:5,z:10},{x:18,z:10},{x:18,z:22},{x:5,z:22}
+  ]);
+  makeEnemy(-10, 18, false, [
+    {x:-18,z:10},{x:-5,z:10},{x:-5,z:26},{x:-18,z:26}
+  ]);
+  makeEnemy(24, 18, false, [
+    {x:22,z:12},{x:30,z:12},{x:30,z:24},{x:22,z:24}
+  ]);
+  makeEnemy(-22, 28, false, [
+    {x:-28,z:24},{x:-14,z:24},{x:-14,z:36},{x:-28,z:36}
+  ]);
+
+  // ── Boss: near pagoda ──
+  makeEnemy(0, 30, true, [{x:-4,z:28},{x:4,z:28},{x:4,z:38},{x:-4,z:38}], true);
 }
+
 
 function createEnemyUI(e) {
   const div = document.createElement('div');
@@ -2113,6 +2052,97 @@ function updateEnemyUI() {
 // ══════════════════════════════════════════════════════════════
 //  STEALTH STATE
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  PLAYER COMBAT
+// ══════════════════════════════════════════════════════════════
+function doAttack() {
+  const P = NM.player;
+  P.isAttacking = true;
+  P.attackTimer = 0.42;
+  P.comboCount = Math.min(P.comboCount + 1, 5);
+  P.comboTimer = 1.2;
+  sfxSwordSwing();
+
+  // Hit detection after short delay
+  setTimeout(() => {
+    if (!P.isAttacking && P.attackTimer > 0) return;
+    const RANGE = 2.4, ANGLE = Math.PI * 0.55;
+    NM.enemies.forEach(e => {
+      if (e.state === 'DEAD') return;
+      const toE = new THREE.Vector3().subVectors(e.mesh.position, P.mesh.position);
+      const dist = toE.length();
+      if (dist > RANGE) return;
+      toE.normalize();
+      const fwd = new THREE.Vector3(Math.sin(P.facingAngle), 0, Math.cos(P.facingAngle));
+      if (fwd.dot(toE) < Math.cos(ANGLE)) return;
+      if (e.isBlocking && Math.random() < 0.4) {
+        sfxBlock();
+        spawnSpark(e.mesh.position.clone().add(new THREE.Vector3(0,1,0)));
+        return;
+      }
+      const dmg = 20 + P.comboCount * 5;
+      hitEnemy(e, dmg);
+      addScore(10);
+    });
+  }, 180);
+}
+
+function getStealthTarget() {
+  const P = NM.player;
+  if (!P) return null;
+  const RANGE = 1.8;
+  return NM.enemies.find(e => {
+    if (e.state === 'DEAD' || e.state === 'ALERT' || e.state === 'CHASE' || e.state === 'ATTACK') return false;
+    return P.mesh.position.distanceTo(e.mesh.position) < RANGE;
+  }) || null;
+}
+
+function doStealthKill(e) {
+  const P = NM.player;
+  P.isStealthKilling = true;
+  P.stealthKillTimer = 1.2;
+  e.state = 'DEAD';
+  sfxStealthKill();
+  spawnBlood(e.mesh.position.clone().add(new THREE.Vector3(0,1,0)), 15, true);
+  NM.score += 500;
+  addScore(500);
+  NM.stealthKills++;
+  P.kills++;
+  NM.kills = P.kills;
+  showNotif('⬧ STEALTH KILL ⬧');
+  // Fade enemy
+  setTimeout(() => {
+    const mesh = e.mesh;
+    let op = 1;
+    const fade = setInterval(() => {
+      op -= 0.05;
+      mesh.traverse(m => { if(m.isMesh&&m.material) { m.material.transparent=true; m.material.opacity=op; }});
+      if(op<=0){ clearInterval(fade); NM.scene.remove(mesh); }
+    }, 50);
+  }, 800);
+  // Check win
+  setTimeout(() => checkWin(), 1300);
+}
+
+function checkWin() {
+  const alive = NM.enemies.filter(e => e.state !== 'DEAD');
+  const bossAlive = alive.find(e => e.isTarget);
+  if (!bossAlive) endMission(true);
+}
+
+function updateZoneHint(pos) {
+  const el = document.getElementById('zone-hint');
+  if (!el) return;
+  let hint = '';
+  if (pos.x<-10 && pos.z<0)          hint = '⬧ STEALTH ZONE — Sneak behind guards';
+  else if (pos.x>4 && pos.z<-14)     hint = '⬧ PLATFORM ZONE — Practice jumping';
+  else if (pos.x>0 && pos.x<14 && pos.z>-10 && pos.z<10) hint = '⬧ WALL JUMP ZONE — Bounce between walls to reach top';
+  else if (pos.x<-4 && pos.z>8 && pos.z<24) hint = '⬧ WALL-TO-PLATFORM — Wall-jump to reach the high ledge';
+  else if (pos.z>8)                   hint = '⬧ PATROL ZONE — Enemies are walking routes';
+  el.textContent = hint;
+  el.style.opacity = hint ? '1' : '0';
+}
+
 function updateStealthState(P) {
   const alerted = NM.enemies.some(e => e.state !== 'DEAD' && e.alertLevel > 0.7);
   const stealthEl = document.getElementById('stealth-indicator');

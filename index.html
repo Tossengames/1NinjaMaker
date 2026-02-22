@@ -67,9 +67,9 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
 #sprint-label { color:#88dd88; font-size:10px; letter-spacing:3px; margin-bottom:3px; }
 #sprint-bar-bg { width:90px; height:5px; background:rgba(0,0,0,0.5); border:1px solid #88dd8844; border-radius:2px; }
 #sprint-bar { height:100%; width:100%; background:linear-gradient(90deg,#27ae60,#2ecc71); border-radius:2px; }
-#score-display { position:fixed; top:16px; right:16px; color:#e8c97e; font-size:13px; letter-spacing:2px; text-align:right; text-shadow:0 0 10px #e8c97e66; }
-#stealth-indicator { position:fixed; top:78px; right:16px; font-size:10px; letter-spacing:2px; transition:color 0.4s; }
-#kills-display { position:fixed; top:56px; right:16px; color:#aaa; font-size:10px; letter-spacing:1px; }
+#score-display { position:fixed; top:160px; right:16px; color:#e8c97e; font-size:13px; letter-spacing:2px; text-align:right; text-shadow:0 0 10px #e8c97e66; }
+#stealth-indicator { position:fixed; top:182px; right:16px; font-size:10px; letter-spacing:2px; transition:color 0.4s; }
+#kills-display { position:fixed; top:198px; right:16px; color:#aaa; font-size:10px; letter-spacing:1px; }
 #objective-display { position:fixed; bottom:130px; right:16px; color:#aaa; font-size:10px; letter-spacing:1px; text-align:right; line-height:1.8; }
 #zone-hint { position:fixed; bottom:200px; left:50%; transform:translateX(-50%); color:rgba(232,201,126,0.8); font-size:11px; letter-spacing:3px; text-align:center; text-transform:uppercase; pointer-events:none; text-shadow:0 0 10px rgba(232,201,126,0.4); opacity:0; transition:opacity 0.4s; white-space:nowrap; }
 #stealth-prompt { position:fixed; bottom:150px; left:50%; transform:translateX(-50%); color:#e8c97e; font-size:12px; letter-spacing:3px; text-transform:uppercase; text-align:center; opacity:0; transition:opacity 0.3s; text-shadow:0 0 14px #e8c97e; white-space:nowrap; }
@@ -81,7 +81,7 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
 @keyframes notifPop { 0%{opacity:0;transform:scale(0.8) translateY(10px)} 15%{opacity:1;transform:scale(1.05) translateY(0)} 30%{transform:scale(1)} 70%{opacity:1} 100%{opacity:0;transform:translateY(-14px)} }
 #pause-btn { position:fixed; top:12px; left:50%; transform:translateX(-50%); width:34px; height:34px; background:rgba(0,0,0,0.45); border:1px solid #e8c97e33; border-radius:50%; display:flex; align-items:center; justify-content:center; pointer-events:all; cursor:pointer; color:#e8c97e; font-size:13px; z-index:25; }
 #cam-btn { position:fixed; top:12px; left:calc(50% + 44px); width:34px; height:34px; background:rgba(0,0,0,0.45); border:1px solid #e8c97e33; border-radius:50%; display:flex; align-items:center; justify-content:center; pointer-events:all; cursor:pointer; color:#e8c97e; font-size:9px; letter-spacing:1px; z-index:25; }
-#minimap { position:fixed; bottom:16px; right:16px; width:130px; height:130px; border:1px solid rgba(232,201,126,0.3); border-radius:4px; background:rgba(0,0,0,0.6); z-index:20; pointer-events:none; display:none; }
+#minimap { position:fixed; top:16px; right:16px; width:130px; height:130px; border:1px solid rgba(232,201,126,0.3); border-radius:4px; background:rgba(0,0,0,0.6); z-index:20; pointer-events:none; display:none; }
 
 /* ── Mobile Controls ── */
 #mobile-controls { display:none; position:fixed; bottom:0; left:0; width:100%; height:100%; pointer-events:none; z-index:20; }
@@ -104,8 +104,10 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
   background:rgba(0,0,0,0.55); border:2px solid rgba(255,255,255,0.15);
   display:flex; align-items:center; justify-content:center;
   font-size:17px; cursor:pointer; pointer-events:all;
-  user-select:none; -webkit-tap-highlight-color:transparent;
+  user-select:none; -webkit-user-select:none; -moz-user-select:none;
+  -webkit-tap-highlight-color:transparent;
   transition:background 0.08s;
+  -webkit-touch-callout:none;
 }
 .fb:active { background:rgba(255,255,255,0.18); }
 /* Triangle — top centre */
@@ -127,6 +129,17 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
   -webkit-tap-highlight-color:transparent;
 }
 #btn-run:active { background:rgba(100,220,100,0.2); }
+#btn-sneak {
+  position:absolute; bottom:76px; right:174px;
+  width:52px; height:52px; border-radius:50%;
+  background:rgba(0,0,0,0.55); border:2px solid rgba(180,140,255,0.6);
+  color:rgba(180,140,255,0.9); font-size:9px; letter-spacing:1px;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:all; cursor:pointer; user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+#btn-sneak.active { background:rgba(180,140,255,0.2); border-color:rgba(180,140,255,1); }
+#btn-sneak:active { background:rgba(180,140,255,0.2); }
 
 /* Stealth glow on attack button */
 #btn-attack.stealth-ready {
@@ -147,9 +160,10 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
   #ki-bar-bg { width:90px; }
   #sprint-bar-wrap { top:46px; left:10px; }
   #sprint-bar-bg { width:76px; }
-  #score-display { top:8px; right:10px; font-size:11px; }
-  #stealth-indicator { top:50px; right:10px; font-size:9px; }
-  #kills-display { top:64px; right:10px; font-size:9px; }
+  #minimap { width:90px !important; height:90px !important; top:8px; right:8px; }
+  #score-display { top:108px; right:8px; font-size:11px; }
+  #stealth-indicator { top:126px; right:8px; font-size:9px; }
+  #kills-display { top:140px; right:8px; font-size:9px; }
   #objective-display { bottom:80px; right:10px; font-size:9px; line-height:1.5; }
   #joystick-zone { bottom:10px; left:10px; width:100px; height:100px; }
   #joystick-base { width:100px; height:100px; }
@@ -157,7 +171,7 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
   #face-buttons { bottom:10px; right:10px; width:128px; height:128px; grid-template-columns:repeat(3,42px); grid-template-rows:repeat(3,42px); }
   .fb { width:42px; height:42px; font-size:15px; }
   #btn-run { bottom:10px; right:148px; width:44px; height:44px; }
-  #minimap { width:105px !important; height:105px !important; bottom:10px; right:182px; }
+  #btn-sneak { bottom:60px; right:148px; width:44px; height:44px; }
   #pause-btn,#cam-btn { top:6px; }
   #zone-hint { bottom:145px; font-size:9px; }
   #stealth-prompt { bottom:110px; font-size:10px; }
@@ -255,12 +269,38 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
 <div id="mobile-controls">
   <div id="joystick-zone"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
   <div id="face-buttons">
-    <div class="fb" id="btn-interact">△</div>
-    <div class="fb" id="btn-attack">□</div>
-    <div class="fb" id="btn-block">○</div>
-    <div class="fb" id="btn-jump">✕</div>
+    <!-- Triangle top = Interact -->
+    <div class="fb" id="btn-interact">
+      <svg width="18" height="16" viewBox="0 0 18 16" fill="none"><polygon points="9,1 17,15 1,15" stroke="rgba(100,210,175,0.9)" stroke-width="2" fill="none"/></svg>
+    </div>
+    <!-- Square left = Attack -->
+    <div class="fb" id="btn-attack">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" stroke="rgba(210,120,170,0.9)" stroke-width="2" fill="none"/></svg>
+    </div>
+    <!-- Circle right = Block -->
+    <div class="fb" id="btn-block">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="rgba(220,90,90,0.9)" stroke-width="2" fill="none"/></svg>
+    </div>
+    <!-- Cross bottom = Jump -->
+    <div class="fb" id="btn-jump">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><line x1="2" y1="2" x2="14" y2="14" stroke="rgba(110,145,230,0.9)" stroke-width="2.5" stroke-linecap="round"/><line x1="14" y1="2" x2="2" y2="14" stroke="rgba(110,145,230,0.9)" stroke-width="2.5" stroke-linecap="round"/></svg>
+    </div>
   </div>
-  <div id="btn-run">RUN</div>
+  <!-- Run button -->
+  <div id="btn-run">
+    <svg width="22" height="18" viewBox="0 0 22 18" fill="none">
+      <path d="M4 14 L10 4 L14 8 L18 2" stroke="rgba(100,220,100,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <circle cx="17" cy="6" r="2.5" fill="rgba(100,220,100,0.7)"/>
+    </svg>
+  </div>
+  <!-- Sneak button -->
+  <div id="btn-sneak">
+    <svg width="20" height="18" viewBox="0 0 20 18" fill="none">
+      <path d="M3 13 Q7 7 10 8 Q13 9 17 5" stroke="rgba(180,140,255,0.9)" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <circle cx="10" cy="6" r="2.5" stroke="rgba(180,140,255,0.9)" stroke-width="1.5" fill="none"/>
+      <path d="M7 16 L10 13 L13 16" stroke="rgba(180,140,255,0.7)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+    </svg>
+  </div>
 </div>
 
 <!-- THREE.JS -->
@@ -277,7 +317,7 @@ const NM = {
   isMobile: /Android|iPhone|iPad|iPod|Touch/i.test(navigator.userAgent) || window.innerWidth < 768,
   keys:{}, mouse:{dx:0,dy:0,lastX:0,lastY:0,isDown:false},
   joystick:{active:false,dx:0,dy:0,id:null},
-  btnState:{sprint:false,block:false,attackJustPressed:false,jumpJustPressed:false},
+  btnState:{sprint:false,block:false,sneak:false,attackJustPressed:false,jumpJustPressed:false},
   scene:null, camera:null, renderer:null, clock:null,
   camYaw:0, camPitch:0.3, camDist:6, camTarget:new THREE.Vector3(),
   camMode:1, // 0=close 1=med 2=far 3=fps
@@ -387,16 +427,21 @@ function initThree() {
   NM.particles=[]; NM._lanterns=[]; NM.enemies=[];
   NM.colliders=[];
 
-  const amb = new THREE.AmbientLight(0x110a1f, 0.9);
+  const amb = new THREE.AmbientLight(0x2a1e3f, 1.8);
   NM.scene.add(amb);
-  const moon = new THREE.DirectionalLight(0xb8c8ff, 0.65);
+  const moon = new THREE.DirectionalLight(0xd0dcff, 1.1);
   moon.position.set(20,40,-10); moon.castShadow=true;
   moon.shadow.mapSize.set(NM.isMobile?1024:2048, NM.isMobile?1024:2048);
   moon.shadow.camera.near=0.5; moon.shadow.camera.far=120;
   moon.shadow.camera.left=-50; moon.shadow.camera.right=50;
   moon.shadow.camera.top=50; moon.shadow.camera.bottom=-50;
   NM.scene.add(moon);
-  NM.scene.add(new THREE.DirectionalLight(0x3344ff,0.25).position.set(-10,5,10)&&new THREE.DirectionalLight(0x3344ff,0.25));
+  // Warm fill light from opposite side
+  const fill = new THREE.DirectionalLight(0x4466ff, 0.5);
+  fill.position.set(-10,5,10); NM.scene.add(fill);
+  // Soft ground bounce
+  const bounce = new THREE.HemisphereLight(0x223366, 0x110a1f, 0.7);
+  NM.scene.add(bounce);
 
   window.onresize = () => {
     NM.renderer.setSize(innerWidth,innerHeight);
@@ -960,50 +1005,41 @@ function updatePlayer(dt) {
     mz+=camFwd.z*(-NM.joystick.dy)-camRight.z*NM.joystick.dx;
   }
 
-  P.isCrouching=NM.keys['shift']&&!NM.keys['control'];
+  P.isCrouching=(NM.keys['shift']||NM.btnState.sneak)&&!NM.keys['control'];
   const wantRun=(NM.keys['control']||NM.btnState.sprint)&&!P.isCrouching;
   const moving=(mx*mx+mz*mz)>0.01;
   if(wantRun&&moving&&P.sprint>0){P.isSprinting=true;P.sprint=Math.max(0,P.sprint-dt*28);}
   else{P.isSprinting=false;if(!wantRun||!moving)P.sprint=Math.min(P.maxSprint,P.sprint+dt*14);}
 
-  const spd=P.isSprinting?P.speed*2.0:P.isCrouching?P.speed*0.35:P.speed;
+  const spd=P.isSprinting?P.speed*2.0:P.isCrouching?P.speed*0.38:P.speed;
   const len=Math.sqrt(mx*mx+mz*mz);
 
-  // Horizontal velocity — responsive always, full air control
+  // Horizontal — hard stop on ground (no slide), gentle air drift
   if(len>0.01){
     mx/=len;mz/=len;
     P.facingAngle=Math.atan2(mx,mz);
-    P.velocity.x=lerp(P.velocity.x,mx*spd,Math.min(1,24*dt));
-    P.velocity.z=lerp(P.velocity.z,mz*spd,Math.min(1,24*dt));
+    P.velocity.x=lerp(P.velocity.x,mx*spd,Math.min(1,30*dt));
+    P.velocity.z=lerp(P.velocity.z,mz*spd,Math.min(1,30*dt));
   } else {
-    const fric=P.onGround?18:3;
+    const fric=P.onGround?42:5;
     P.velocity.x=lerp(P.velocity.x,0,Math.min(1,fric*dt));
     P.velocity.z=lerp(P.velocity.z,0,Math.min(1,fric*dt));
   }
 
-  // Gravity — heavier on way down
-  P.yVel-=(P.yVel>0?22:32)*dt;
-  P.yVel=Math.max(P.yVel,-30);
+  // Gravity — uniform, faster fall for snappy feel
+  P.yVel -= 36 * dt;
+  P.yVel = Math.max(P.yVel, -38);
 
-  // Coyote time
-  if(P.onGround) P._coyoteTimer=0.1;
-  else if(P._coyoteTimer>0) P._coyoteTimer-=dt;
-
-  // Jump — edge detect + buffer
+  // Jump — simple edge detect, no coyote time, standard double jump
   const jumpEdge=NM.btnState.jumpJustPressed||(NM.keys[' ']&&!P._spaceWasDown);
   P._spaceWasDown=NM.keys[' '];
   NM.btnState.jumpJustPressed=false;
-  if(jumpEdge) P._jumpBuffer=0.12;
-  if(P._jumpBuffer>0) P._jumpBuffer-=dt;
-
-  if(P._jumpBuffer>0){
-    if(P.onGround||P._coyoteTimer>0){
-      P.yVel=11.0; P.jumpsLeft=1;
-      P._coyoteTimer=0; P._jumpBuffer=0;
+  if(jumpEdge){
+    if(P.onGround){
+      P.yVel=13.0; P.jumpsLeft=1;
       P.onGround=false; sfxJump();
     } else if(P.jumpsLeft>0){
-      P.yVel=9.5; P.jumpsLeft=0;
-      P._jumpBuffer=0;
+      P.yVel=12.0; P.jumpsLeft=0;
       spawnDoubleJumpFX(P.mesh.position.clone()); sfxJump();
     }
   }
@@ -1478,7 +1514,7 @@ function updateStealthIndicator(){
   const el=document.getElementById('stealth-indicator'); if(!el) return;
   const alerted=NM.enemies.some(e=>e.state!=='DEAD'&&e.alertLevel>0.7);
   if(alerted){el.textContent='● DETECTED';el.style.color='#e74c3c';}
-  else if(P.isCrouching){el.textContent='● HIDING';el.style.color='#4488ff';}
+  else if(P.isCrouching){el.textContent='● SNEAKING';el.style.color='#bb88ff';}
   else{el.textContent='● SHADOW';el.style.color='#44bb88';}
 }
 
@@ -1744,6 +1780,7 @@ function bindMobileButtons(){
     el.addEventListener('mouseup',e=>{if(up)up();e.stopPropagation();});
   }
   mb('btn-run',()=>NM.btnState.sprint=true,()=>NM.btnState.sprint=false);
+  mb('btn-sneak',()=>{NM.btnState.sneak=!NM.btnState.sneak;document.getElementById('btn-sneak').classList.toggle('active',NM.btnState.sneak);},null);
   mb('btn-attack',()=>NM.btnState.attackJustPressed=true,null);
   mb('btn-jump',()=>NM.btnState.jumpJustPressed=true,null);
   mb('btn-block',()=>NM.btnState.block=true,()=>NM.btnState.block=false);

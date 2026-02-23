@@ -81,7 +81,7 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
 @keyframes notifPop { 0%{opacity:0;transform:scale(0.8) translateY(10px)} 15%{opacity:1;transform:scale(1.05) translateY(0)} 30%{transform:scale(1)} 70%{opacity:1} 100%{opacity:0;transform:translateY(-14px)} }
 #pause-btn { position:fixed; top:12px; left:50%; transform:translateX(-50%); width:34px; height:34px; background:rgba(0,0,0,0.45); border:1px solid #e8c97e33; border-radius:50%; display:flex; align-items:center; justify-content:center; pointer-events:all; cursor:pointer; color:#e8c97e; font-size:13px; z-index:25; }
 #cam-btn { position:fixed; top:12px; left:calc(50% + 44px); width:34px; height:34px; background:rgba(0,0,0,0.45); border:1px solid #e8c97e33; border-radius:50%; display:flex; align-items:center; justify-content:center; pointer-events:all; cursor:pointer; color:#e8c97e; font-size:9px; letter-spacing:1px; z-index:25; }
-#minimap { position:fixed; top:16px; right:16px; width:130px; height:130px; border:1px solid rgba(232,201,126,0.3); border-radius:4px; background:rgba(0,0,0,0.6); z-index:20; pointer-events:none; display:none; }
+#minimap { position:fixed; top:16px; right:16px; width:180px; height:180px; border:2px solid rgba(232,201,126,0.5); border-radius:8px; background:rgba(0,0,0,0.8); z-index:20; pointer-events:none; display:block; box-shadow:0 0 20px rgba(232,201,126,0.2); }
 
 /* ── Mobile Controls ── */
 #mobile-controls { display:none; position:fixed; bottom:0; left:0; width:100%; height:100%; pointer-events:none; z-index:20; }
@@ -160,7 +160,7 @@ body { background:#000; overflow:hidden; font-family:serif; touch-action:none; }
   #ki-bar-bg { width:90px; }
   #sprint-bar-wrap { top:46px; left:10px; }
   #sprint-bar-bg { width:76px; }
-  #minimap { width:90px !important; height:90px !important; top:8px; right:8px; }
+  #minimap { width:120px !important; height:120px !important; top:8px; right:8px; }
   #score-display { top:108px; right:8px; font-size:11px; }
   #stealth-indicator { top:126px; right:8px; font-size:9px; }
   #kills-display { top:140px; right:8px; font-size:9px; }
@@ -323,7 +323,7 @@ const NM = {
   camMode:1, // 0=close 1=med 2=far 3=fps
   CAM_PRESETS:[[3.5,0.2,70],[6,0.28,65],[11,0.38,58],[0,0.05,80]],
   colliders:[], enemies:[], particles:[], player:null,
-  groundY:0, levelBounds:{minX:-50,maxX:50,minZ:-50,maxZ:50},
+  groundY:0, levelBounds:{minX:-70,maxX:70,minZ:-70,maxZ:70},
   audioCtx:null, bgmNodes:[], _lanterns:[], _raf:null,
 };
 
@@ -394,7 +394,7 @@ async function startGame(stage) {
   buildLevel(stage);
   spawnPlayer(stage);
   spawnEnemies(stage);
-  initMinimap();
+  document.getElementById('minimap').style.display='block';
   document.getElementById('hud').style.display='block';
   if (NM.isMobile) {
     document.getElementById('mobile-controls').style.display='block';
@@ -419,7 +419,7 @@ function initThree() {
   NM.renderer.domElement.style.cssText='position:fixed;top:0;left:0;z-index:1;';
   document.body.appendChild(NM.renderer.domElement);
   NM.scene = new THREE.Scene();
-  NM.scene.fog = new THREE.FogExp2(0x050008, 0.022);
+  NM.scene.fog = new THREE.FogExp2(0x050008, 0.018);
   NM.camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 200);
   NM.clock = new THREE.Clock();
   NM.camYaw=0; NM.camPitch=0.3; NM.camDist=6; NM.camMode=1;
@@ -473,7 +473,10 @@ function box(w,h,d,x,y,z,mat,castShadow=true) {
   mesh.castShadow = castShadow;
   mesh.receiveShadow = true;
   NM.scene.add(mesh);
-  NM.colliders.push({minX:x-w/2,maxX:x+w/2,minY:y-h/2,maxY:y+h/2,minZ:z-d/2,maxZ:z+d/2});
+  // Only add collider for walls and platforms, not ground
+  if (h > 0.8 || (h > 0.4 && y > 0.2)) {
+    NM.colliders.push({minX:x-w/2,maxX:x+w/2,minY:y-h/2,maxY:y+h/2,minZ:z-d/2,maxZ:z+d/2});
+  }
   return mesh;
 }
 // ── Decorative box (no collider) ──
@@ -519,7 +522,7 @@ function stars() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  STAGE BUILDER
+//  STAGE BUILDER - ENLARGED FOR BETTER MOVEMENT
 // ══════════════════════════════════════════════════════════════
 function buildLevel(stage) {
   NM.colliders=[];
@@ -531,240 +534,309 @@ function buildLevel(stage) {
   else buildStage2(M);
 }
 
-// ── STAGE 0: Tutorial ──────────────────────────────────────────
+// ── STAGE 0: Tutorial - ENLARGED ──────────────────────────────────────────
 function buildTutorial(M) {
-  // Large flat ground
-  box(100,0.5,100, 0,-0.25,0, M.stone, false);
+  // Large ground with clear space
+  box(140,0.5,140, 0,-0.25,0, M.stone, false);
 
-  // ── A: Movement area — open grass-coloured floor patch ──
-  deco(20,0.04,20, 0,0.02,-10, M.green);
-
-  // ── B: Jump platforms — clear visible cubes in a line ──
-  // All platforms are solid bright-coloured boxes so player can see them clearly
+  // ── Jump platforms with more space between them ──
   const platMat = new THREE.MeshLambertMaterial({color:0x3a2060});
-  box(4,1,4,  -20,0.5,-20, platMat);   // low
-  box(4,2,4,  -14,1,  -20, platMat);   // medium
-  box(4,3,4,   -8,1.5,-20, platMat);   // tall (needs jump to land on top)
-  box(4,4,4,   -2,2,  -20, platMat);   // taller
-  box(4,5,4,    4,2.5,-20, platMat);   // double-jump needed
-  // Sign-style pole marker
-  deco(0.2,3,0.2, -20,1.5,-16, M.wood);
-  deco(0.2,3,0.2, 4,3,-16, M.wood);
+  box(4,1,4,  -25,0.5,-20, platMat);   // low
+  box(4,2,4,  -15,1,  -20, platMat);   // medium
+  box(4,3,4,   -5,1.5,-20, platMat);   // tall
+  box(4,4,4,    5,2,  -20, platMat);   // taller
+  box(4,5,4,   15,2.5,-20, platMat);   // tallest
+  
+  // Additional floating platforms for practice
+  box(6,1,6,   30,3, -25, platMat);
+  box(6,1,6,   30,5, -15, platMat);
+  box(6,1,6,   30,7, -5,  platMat);
 
-  // ── C: Attack target dummies — simple cubes with marker ──
+  // ── Attack targets with open space ──
   const dummyMat = new THREE.MeshLambertMaterial({color:0x553322});
-  box(1,2,1,  15,1,0,  dummyMat);
-  box(1,2,1,  18,1,0,  dummyMat);
-  box(1,2,1,  21,1,0,  dummyMat);
-  deco(1.1,0.2,1.1, 15,2.1,0, M.red);
-  deco(1.1,0.2,1.1, 18,2.1,0, M.red);
-  deco(1.1,0.2,1.1, 21,2.1,0, M.red);
+  box(1,2,1,  25,1,0,  dummyMat);
+  box(1,2,1,  28,1,5,  dummyMat);
+  box(1,2,1,  31,1,-5,  dummyMat);
+  box(1,2,1,  34,1,0,  dummyMat);
 
-  // ── D: Stealth zone — low cover wall ──
-  box(8,1.2,0.6, -10,0.6, 12, M.stone);  // cover wall
-  box(0.6,1.2,6, -6,0.6,  16, M.stone);
+  // ── Stealth zone with wide cover ──
+  box(12,1.2,2, -20,0.6, 25, M.stone);
+  box(2,1.2,12, -26,0.6, 30, M.stone);
+  box(2,1.2,12, -14,0.6, 30, M.stone);
+  
+  // Clear path through stealth zone
+  box(8,0.5,8, -20,0.25, 30, M.green, false);
 
-  // ── Outer boundary ──
-  box(100,5,1.5, 0,2.5,-50, M.dark);
-  box(100,5,1.5, 0,2.5, 50, M.dark);
-  box(1.5,5,100, 50,2.5,  0, M.dark);
-  box(1.5,5,100,-50,2.5,  0, M.dark);
+  // ── Boundary walls (less intrusive) ──
+  box(150,8,3, 0,4,-75, M.dark);
+  box(150,8,3, 0,4, 75, M.dark);
+  box(3,8,150, 75,4,0, M.dark);
+  box(3,8,150, -75,4,0, M.dark);
 
-  lantern(-20,0,-24); lantern(4,0,-24);
-  lantern(14,0,-4); lantern(14,0,4);
-  lantern(-10,0,8); lantern(-6,0,10);
-  cherryTree(-35,0,0); cherryTree(35,0,0); cherryTree(0,0,-35);
+  lantern(-30,0,-30); lantern(30,0,-30);
+  lantern(30,0,30); lantern(-30,0,30);
+  lantern(0,0,0);
+  cherryTree(-50,0,-40); cherryTree(50,0,-40); cherryTree(0,0,60);
 
-  NM.levelBounds={minX:-49,maxX:49,minZ:-49,maxZ:49};
+  NM.levelBounds={minX:-74,maxX:74,minZ:-74,maxZ:74};
 }
 
-// ── STAGE 1: The Jade Courtyard ────────────────────────────────
+// ── STAGE 1: The Jade Courtyard - ENLARGED ────────────────────────────────
 function buildStage1(M) {
-  // Ground
-  box(80,0.5,80, 0,-0.25,0, M.stone, false);
+  // Bigger ground
+  box(140,0.5,140, 0,-0.25,0, M.stone, false);
 
-  // Decorative tile grid (no collision)
-  for(let x=-4;x<=4;x++) for(let z=-4;z<=4;z++)
-    if((x+z)%2===0) deco(4.8,0.04,4.8, x*9,0.02,z*9, M.tile);
+  // Decorative tile grid with larger spacing
+  for(let x=-6;x<=6;x++) for(let z=-6;z<=6;z++)
+    if((x+z)%2===0) deco(8,0.04,8, x*12,0.02,z*12, M.tile);
 
-  // ── Pagoda (north) ──
-  box(14,1.2,14, 0,0.6,-28, M.stone);
-  // Steps to pagoda
-  box(8,0.4,1.5, 0,0.7,-21.5, M.stone);
-  box(7,0.4,1.5, 0,1.1,-22.5, M.stone);
-  box(6,0.4,1.5, 0,1.5,-23.5, M.stone);
-  // Pagoda pillars
-  [[-4,-4],[4,-4],[-4,4],[4,4]].forEach(([ox,oz])=> box(0.8,7,0.8, ox,4.2,-28+oz, M.wood));
-  // Floor 1 solid walls
-  box(10,5,0.5, 0,4,-24.2, M.dark);
-  box(10,5,0.5, 0,4,-31.8, M.dark);
-  box(0.5,5,10, -4.8,4,-28, M.dark);
-  box(0.5,5,10,  4.8,4,-28, M.dark);
-  // Roof tiers (decorative boxes, clearly visible)
-  deco(14,0.5,14, 0,7.5,-28, M.red);
-  deco(10,0.5,10, 0,9.5,-28, M.red);
-  deco(6,0.5,6,   0,11.5,-28,M.red);
-  deco(0.4,3,0.4, 0,13,-28, M.gold); // spire
+  // ── Pagoda (north) with bigger footprint ──
+  box(20,1.2,20, 0,0.6,-45, M.stone);
+  // Wider steps
+  for(let i=0;i<5;i++) {
+    box(12-i,0.4,2, 0,0.7+i*0.4,-35+i*0.8, M.stone);
+  }
+  // Pagoda pillars with more spacing
+  [[-6,-6],[6,-6],[-6,6],[6,6]].forEach(([ox,oz])=> box(1,9,1, ox,5,-45+oz, M.wood));
+  // Roof tiers
+  deco(18,0.5,18, 0,10,-45, M.red);
+  deco(12,0.5,12, 0,13,-45, M.red);
+  deco(8,0.5,8,   0,16,-45, M.red);
+  deco(1,4,1, 0,19,-45, M.gold);
 
-  // ── Cover walls ──
-  [[-8,0.6,-8],[8,0.6,-8],[-10,0.6,4],[10,0.6,4],[0,0.6,8]].forEach(([x,y,z])=>{
-    box(6,1.2,0.6, x,y,z, M.stone);
+  // ── Wide cover walls with gaps ──
+  [[-15,0.6,-15],[15,0.6,-15],[-20,0.6,10],[20,0.6,10],[0,0.6,20]].forEach(([x,y,z])=>{
+    box(8,1.2,1.5, x,y,z, M.stone);
   });
-  [[-12,0.6,0],[12,0.6,0]].forEach(([x,y,z])=>{
-    box(0.6,1.2,8, x,y,z, M.stone);
+  [[-25,0.6,5],[25,0.6,5]].forEach(([x,y,z])=>{
+    box(1.5,1.2,12, x,y,z, M.stone);
+  });
+
+  // ── Elevated walkways (new) ──
+  box(10,0.4,4, -30,4, -20, M.stone);
+  box(10,0.4,4,  30,4, -20, M.stone);
+  box(4,0.4,10, -30,6, 20, M.stone);
+  box(4,0.4,10,  30,6, 20, M.stone);
+
+  // ── Boundary walls ──
+  box(140,6,3, 0,3,-70, M.dark);
+  box(140,6,3, 0,3, 70, M.dark);
+  box(3,6,140, 70,3,0, M.dark);
+  box(3,6,140, -70,3,0, M.dark);
+
+  // Walkable wall tops
+  box(140,0.4,3, 0,6.2,-70, M.stone);
+  box(140,0.4,3, 0,6.2, 70, M.stone);
+  box(3,0.4,140, 70,6.2,0, M.stone);
+  box(3,0.4,140, -70,6.2,0, M.stone);
+
+  // ── Decorations with wider distribution ──
+  [[-20,0,-20],[20,0,-20],[-20,0,20],[20,0,20],[-40,0,-30],[40,0,-30],[-40,0,30],[40,0,30]].forEach(([x,y,z])=> lantern(x,y,z));
+  [[-50,0,-40],[50,0,-40],[-50,0,40],[50,0,40],[-30,0,50],[30,0,50]].forEach(([x,y,z])=> cherryTree(x,y,z));
+
+  NM.levelBounds={minX:-69,maxX:69,minZ:-69,maxZ:69};
+}
+
+// ── STAGE 2: The Pagoda District - ENLARGED ──────────────────────────────
+function buildStage2(M) {
+  // Huge ground for maximum movement
+  box(200,0.5,200, 0,-0.25,0, M.stone, false);
+  
+  // Tile pattern
+  for(let x=-8;x<=8;x++) for(let z=-8;z<=8;z++)
+    if((x+z)%2===0) deco(10,0.04,10, x*15,0.02,z*15, M.tile);
+
+  // ── Central complex with multiple levels ──
+  // Main pagoda area
+  box(30,2,30, 0,1,-60, M.stone);
+  [[-9,-9],[9,-9],[-9,9],[9,9]].forEach(([ox,oz])=> box(1.5,12,1.5, ox,7,-60+oz, M.wood));
+  
+  // Multiple tiered roofs for climbing
+  box(24,0.5,24, 0,12,-60, M.red);
+  box(18,0.5,18, 0,16,-60, M.red);
+  box(12,0.5,12, 0,20,-60, M.red);
+  box(6,0.5,6, 0,24,-60, M.red);
+  deco(1,5,1, 0,28,-60, M.gold);
+  
+  // Wide stairs
+  for(let i=0;i<8;i++) box(18-i*1.5,0.4,2, 0,1.5+i*0.5,-40+i*0.8, M.stone);
+
+  // ── East and west structures with platforms ──
+  // East tower
+  box(20,1,20, 70,0.5,-20, M.stone);
+  for(let h=2; h<8; h+=2) box(16-h,0.4,16-h, 70,1.5+h*0.8,-20, M.stone);
+  
+  // West tower
+  box(20,1,20, -70,0.5,-20, M.stone);
+  for(let h=2; h<8; h+=2) box(16-h,0.4,16-h, -70,1.5+h*0.8,-20, M.stone);
+  
+  // North platform (boss arena)
+  box(40,1,40, 0,1, 50, M.stone);
+  box(30,0.5,30, 0,3, 50, M.red);
+  box(20,0.5,20, 0,5, 50, M.red);
+  box(10,0.5,10, 0,7, 50, M.red);
+
+  // ── Connecting bridges and walkways ──
+  box(8,0.4,30, -35,4, 15, M.stone);
+  box(8,0.4,30, 35,4, 15, M.stone);
+  box(40,0.4,8, 0,6, -10, M.stone);
+  box(20,0.4,8, 50,8, 0, M.stone);
+  box(20,0.4,8, -50,8, 0, M.stone);
+
+  // ── Parkour challenges ──
+  const pMat = new THREE.MeshLambertMaterial({color:0x5a3a7a});
+  for(let i=0; i<12; i++) {
+    let x = -40 + i*8;
+    let y = 2 + Math.sin(i*1.5)*2;
+    box(2,0.4,2, x, y, -40, pMat);
+  }
+  
+  for(let i=0; i<12; i++) {
+    let z = -30 + i*6;
+    let y = 3 + Math.cos(i*1.2)*3;
+    box(2,0.4,2, 60, y, z, pMat);
+  }
+
+  // ── Wide cover walls for stealth ──
+  [[-40,0.6,20],[40,0.6,20],[-40,0.6,-30],[40,0.6,-30]].forEach(([x,y,z])=>{
+    box(15,1.2,2, x,y,z, M.stone);
+    box(2,1.2,15, x+8,y,z+5, M.stone);
   });
 
   // ── Boundary walls ──
-  box(80,5,1.5, 0,2.5,-39, M.dark);
-  box(80,5,1.5, 0,2.5, 20, M.dark);
-  box(1.5,5,60, 39,2.5,-10, M.dark);
-  box(1.5,5,60,-39,2.5,-10, M.dark);
+  box(200,8,3, 0,4,-100, M.dark);
+  box(200,8,3, 0,4, 100, M.dark);
+  box(3,8,200, 100,4,0, M.dark);
+  box(3,8,200, -100,4,0, M.dark);
 
   // Walkable wall tops
-  box(80,0.4,1.5, 0,5.2,-39, M.stone);
-  box(80,0.4,1.5, 0,5.2, 20, M.stone);
-  box(1.5,0.4,60, 39,5.2,-10, M.stone);
-  box(1.5,0.4,60,-39,5.2,-10, M.stone);
+  box(200,0.4,3, 0,8.2,-100, M.stone);
+  box(200,0.4,3, 0,8.2, 100, M.stone);
+  box(3,0.4,200, 100,8.2,0, M.stone);
+  box(3,0.4,200, -100,8.2,0, M.stone);
 
-  // ── Decorations ──
-  [[-14,0,-12],[14,0,-12],[-14,0,4],[14,0,4],[-6,0,10],[6,0,10],
-   [-4,0,-20],[4,0,-20]].forEach(([x,y,z])=> lantern(x,y,z));
-  [[-25,0,-10],[25,0,-10],[-25,0,5],[25,0,5],[-8,0,12],[8,0,12]].forEach(([x,y,z])=> cherryTree(x,y,z));
+  // ── Abundant decoration ──
+  const lanternPos = [];
+  for(let x=-80; x<=80; x+=40) {
+    for(let z=-80; z<=80; z+=40) {
+      lanternPos.push([x,0,z]);
+    }
+  }
+  lanternPos.forEach(([x,y,z])=> lantern(x,y,z));
+  
+  [[-80,0,-60],[80,0,-60],[-80,0,60],[80,0,60],[-60,0,80],[60,0,80]].forEach(([x,y,z])=> cherryTree(x,y,z));
 
-  NM.levelBounds={minX:-38,maxX:38,minZ:-38,maxZ:19};
-}
-
-// ── STAGE 2: The Pagoda District ──────────────────────────────
-function buildStage2(M) {
-  box(110,0.5,110, 0,-0.25,0, M.stone, false);
-  for(let x=-5;x<=5;x++) for(let z=-5;z<=5;z++)
-    if((x+z)%2===0) deco(5.5,0.04,5.5, x*10,0.02,z*10, M.tile);
-
-  // ── Big pagoda complex ──
-  box(20,1.5,20, 0,0.75,-36, M.stone);
-  [[-6,-6],[6,-6],[-6,6],[6,6]].forEach(([ox,oz])=> box(1,9,1, ox,5.5,-36+oz, M.wood));
-  box(16,0.5,16, 0,10.25,-36, M.red);
-  box(10,0.5,10, 0,13,-36, M.red);
-  box(6,0.5,6,   0,15,-36, M.red);
-  deco(0.5,4,0.5, 0,17,-36, M.gold);
-  // Steps
-  for(let i=0;i<5;i++) box(12-i*1.5,0.4,1.5, 0,1.5+i*0.4,-26-i*0.6, M.stone);
-
-  // ── East barracks ──
-  box(14,0.5,10, 30,0.25,-12, M.stone,false);
-  box(14,4,0.5,  30,2.25,-17, M.dark);
-  box(14,4,0.5,  30,2.25,-7,  M.dark);
-  box(0.5,4,10,  23,2.25,-12, M.dark);
-  box(0.5,4,10,  37,2.25,-12, M.dark);
-  box(14,0.5,10, 30,4.25,-12, M.stone); // roof walkable
-
-  // ── West temple ──
-  box(16,1,16, -30,0.5,-12, M.stone);
-  box(16,0.5,16,-30,3.5,-12, M.red);
-  [[-6,-6],[6,-6],[-6,6],[6,6]].forEach(([ox,oz])=> box(0.9,5,0.9, -30+ox,3,-12+oz, M.wood));
-  // Steps
-  box(6,0.4,1.5,-30,0.8,-4.5, M.stone);
-  box(5,0.7,1.5,-30,1.2,-3.5, M.stone);
-
-  // ── Parkour stepping stones — centre line ──
-  [[0,1,-8],[4,1.8,-12],[-4,2.6,-16],[0,3.4,-20],[5,4.2,-24],[-5,5,-28]].forEach(([x,y,z])=>{
-    box(3,0.5,3, x,y,z, M.stone);
-  });
-
-  // ── Cover ──
-  [[10,0.6,-6],[-10,0.6,-6],[18,0.6,0],[-18,0.6,0],[0,0.6,8],[0,0.6,-8]].forEach(([x,y,z])=>{
-    if(typeof x==='number') box(6,1.2,0.6, x,y,z, M.stone);
-  });
-
-  // ── Boundary ──
-  box(110,6,1.5, 0,3,-54, M.dark);
-  box(110,6,1.5, 0,3, 24, M.dark);
-  box(1.5,6,80,  54,3,-16, M.dark);
-  box(1.5,6,80, -54,3,-16, M.dark);
-  box(110,0.4,1.5,0,6.2,-54,M.stone);
-  box(110,0.4,1.5,0,6.2, 24,M.stone);
-  box(1.5,0.4,80,54,6.2,-16,M.stone);
-  box(1.5,0.4,80,-54,6.2,-16,M.stone);
-
-  [[-20,0,-6],[20,0,-6],[-20,0,8],[20,0,8],[0,0,-10],[0,0,10],
-   [-10,0,-24],[10,0,-24],[0,4.5,-36],[-6,4.5,-36],[6,4.5,-36],
-   [30,4.5,-12],[-30,3.5,-12]].forEach(([x,y,z])=> lantern(x,y,z));
-  [[-35,0,0],[35,0,0],[-35,0,-20],[35,0,-20],[-10,0,14],[10,0,14]].forEach(([x,y,z])=> cherryTree(x,y,z));
-
-  NM.levelBounds={minX:-53,maxX:53,minZ:-53,maxZ:23};
+  NM.levelBounds={minX:-99,maxX:99,minZ:-99,maxZ:99};
 }
 
 // ══════════════════════════════════════════════════════════════
-//  COLLISION — clean AABB, no wall-stick
+//  COLLISION — FIXED: No invisible walls, smooth movement
 // ══════════════════════════════════════════════════════════════
-const CHAR_H=1.85, CHAR_R=0.30, STEP_H=0.52;
+const CHAR_H=1.85, CHAR_R=0.35, STEP_H=0.6;
 
 function sweepPlayer(fromPos, toPos, yVel) {
   const r = CHAR_R;
   let px = toPos.x, py = toPos.y, pz = toPos.z;
-  let onGround = false, groundY = -Infinity;
+  let onGround = false;
+  let groundY = -Infinity;
+  let groundFound = false;
 
-  for (const c of NM.colliders) {
-    // broad-phase XZ
+  // Sort colliders by relevance (only check nearby)
+  const nearbyColliders = NM.colliders.filter(c => 
+    Math.abs(c.minX + (c.maxX-c.minX)/2 - px) < 15 &&
+    Math.abs(c.minZ + (c.maxZ-c.minZ)/2 - pz) < 15
+  );
+
+  for (const c of nearbyColliders) {
+    // Broad-phase XZ check
     if (px + r <= c.minX || px - r >= c.maxX) continue;
     if (pz + r <= c.minZ || pz - r >= c.maxZ) continue;
 
-    // vertical broad-phase
-    if (py >= c.maxY + 0.02) continue;       // character is above — skip
-    if (py + CHAR_H <= c.minY) continue;     // character is below — skip
+    // Check if we're above the collider
+    const playerFeet = py;
+    const playerHead = py + CHAR_H;
+    
+    // If entirely above, skip
+    if (playerFeet >= c.maxY + 0.1) continue;
+    // If entirely below, skip
+    if (playerHead <= c.minY) continue;
 
-    const top = c.maxY;
-
-    // ── LANDING: feet were above surface, now at or below, AND we are falling ──
-    if (yVel <= 0 && fromPos.y >= top - 0.02 && py <= top + 0.12) {
-      if (top > groundY) groundY = top;
-      onGround = true;
-      continue; // landed on top, no side push needed
+    // LANDING: coming down onto a surface
+    if (yVel <= 0 && fromPos.y + CHAR_H > c.maxY - 0.1 && py <= c.maxY + 0.2) {
+      if (c.maxY > groundY) {
+        groundY = c.maxY;
+        groundFound = true;
+      }
+      continue; // Landed on top
     }
 
-    // ── SIDE push: only when feet are clearly below the top surface ──
-    if (py > top - 0.2) continue; // near the top edge — don't push sideways
+    // HIT CEILING: jumping into bottom of platform
+    if (yVel > 0 && py + CHAR_H >= c.minY && fromPos.y + CHAR_H <= c.minY + 0.1) {
+      py = c.minY - CHAR_H - 0.01;
+      yVel = Math.max(0, yVel * -0.2); // Bounce down slightly
+      continue;
+    }
 
-    const penL = (px + r) - c.minX;
-    const penR = c.maxX - (px - r);
-    const penF = (pz + r) - c.minZ;
-    const penB = c.maxZ - (pz - r);
-
-    if (Math.min(penL, penR) < Math.min(penF, penB)) {
-      px = penL < penR ? c.minX - r : c.maxX + r;
-    } else {
-      pz = penF < penB ? c.minZ - r : c.maxZ + r;
+    // SIDE COLLISION - only push if we're actually intersecting
+    // and not near the top edge
+    if (py + CHAR_H > c.minY + 0.2 && py < c.maxY - 0.2) {
+      const overlapX = Math.min(px + r - c.minX, c.maxX - (px - r));
+      const overlapZ = Math.min(pz + r - c.minZ, c.maxZ - (pz - r));
+      
+      if (overlapX < overlapZ) {
+        if (px < c.minX) px = c.minX - r;
+        else if (px > c.maxX) px = c.maxX + r;
+      } else {
+        if (pz < c.minZ) pz = c.minZ - r;
+        else if (pz > c.maxZ) pz = c.maxZ + r;
+      }
     }
   }
 
-  // snap to ground
-  if (onGround && groundY > -Infinity) py = groundY;
+  // Apply ground landing
+  if (groundFound) {
+    py = groundY;
+    onGround = true;
+    yVel = Math.max(0, yVel);
+  }
 
-  // hard floor
-  if (py < 0) { py = 0; onGround = true; }
+  // Hard floor
+  if (py < 0) { 
+    py = 0; 
+    onGround = true; 
+  }
 
-  // level boundary
+  // Level boundary
   const B = NM.levelBounds;
-  if (px - r < B.minX) px = B.minX + r;
-  if (px + r > B.maxX) px = B.maxX - r;
-  if (pz - r < B.minZ) pz = B.minZ + r;
-  if (pz + r > B.maxZ) pz = B.maxZ - r;
+  px = clamp(px, B.minX + r, B.maxX - r);
+  pz = clamp(pz, B.minZ + r, B.maxZ - r);
 
-  return { pos: new THREE.Vector3(px, py, pz), onGround };
+  return { pos: new THREE.Vector3(px, py, pz), onGround, yVel };
 }
 
 function resolveEnemyCollision(pos, radius) {
   let rx=pos.x, rz=pos.z;
-  for (const c of NM.colliders) {
-    const h=c.maxY-c.minY;
-    if (h<0.3 || c.minY>0.8) continue;
+  const nearby = NM.colliders.filter(c => 
+    Math.abs(c.minX + (c.maxX-c.minX)/2 - rx) < 10 &&
+    Math.abs(c.minZ + (c.maxZ-c.minZ)/2 - rz) < 10
+  );
+  
+  for (const c of nearby) {
+    if (c.minY > pos.y + 1.5 || c.maxY < pos.y - 0.5) continue;
+    
     if (rx+radius<=c.minX || rx-radius>=c.maxX) continue;
     if (rz+radius<=c.minZ || rz-radius>=c.maxZ) continue;
+    
     const penL=(rx+radius)-c.minX, penR=c.maxX-(rx-radius);
     const penF=(rz+radius)-c.minZ, penB=c.maxZ-(rz-radius);
-    if (Math.min(penL,penR)<Math.min(penF,penB)) rx=penL<penR?c.minX-radius:c.maxX+radius;
-    else rz=penF<penB?c.minZ-radius:c.maxZ+radius;
+    
+    if (Math.min(penL,penR) < Math.min(penF,penB)) {
+      rx = penL < penR ? c.minX - radius : c.maxX + radius;
+    } else {
+      rz = penF < penB ? c.minZ - radius : c.maxZ + radius;
+    }
   }
+  
   const B=NM.levelBounds;
   return new THREE.Vector3(clamp(rx,B.minX+radius,B.maxX-radius),pos.y,clamp(rz,B.minZ+radius,B.maxZ-radius));
 }
@@ -866,10 +938,10 @@ function buildChar(opts={}) {
 // ══════════════════════════════════════════════════════════════
 function spawnPlayer(stage) {
   const mesh=buildChar({bodyColor:0x0d0d1a,headColor:0x0d0d1a,eyeColor:0x44aaff,scarf:true,scarfColor:0x0022cc,isPlayer:true});
-  const sp = stage===0?{x:0,z:5}:stage===1?{x:0,z:12}:{x:0,z:18};
+  const sp = stage===0?{x:0,z:20}:stage===1?{x:0,z:20}:{x:0,z:30};
   mesh.position.set(sp.x,0,sp.z);
   NM.player={
-    mesh, hp:100,maxHp:100, ki:100,maxKi:100, speed:5.5,
+    mesh, hp:100,maxHp:100, ki:100,maxKi:100, speed:6.5,
     sprint:100,maxSprint:100, isSprinting:false,
     yVel:0, onGround:true, jumpsLeft:2,
     isAttacking:false,isBlocking:false,isCrouching:false,
@@ -921,28 +993,30 @@ function makeEnemy(x,z,isBoss,patrol,isTarget=false) {
 function spawnEnemies(stage) {
   NM.enemies=[];
   if (stage===0) {
-    // Tutorial: 3 standing stealth targets, no aggro
-    makeEnemy(-10,14,false,[{x:-10,z:14}]);
-    makeEnemy(-14,16,false,[{x:-14,z:16}]);
-    makeEnemy(-7,18,false,[{x:-7,z:18}]);
+    // Tutorial: 3 standing stealth targets, wide spacing
+    makeEnemy(-30,40,false,[{x:-30,z:40}]);
+    makeEnemy(0,45,false,[{x:0,z:45}]);
+    makeEnemy(30,40,false,[{x:30,z:40}]);
     // Make them non-aggressive for tutorial
     NM.enemies.forEach(e=>{e.vision=0;e.hearingRadius=0;});
   } else if (stage===1) {
-    makeEnemy(-8,-6,false,[{x:-8,z:-6},{x:8,z:-6},{x:8,z:6},{x:-8,z:6}]);
-    makeEnemy(10,-12,false,[{x:10,z:-12},{x:10,z:-22},{x:-4,z:-22}]);
-    makeEnemy(-10,-12,false,[{x:-10,z:-12},{x:-10,z:-22},{x:4,z:-22}]);
-    makeEnemy(14,2,false,[{x:14,z:2},{x:24,z:2},{x:24,z:12},{x:14,z:12}]);
-    makeEnemy(-14,2,false,[{x:-14,z:2},{x:-24,z:2},{x:-24,z:12}]);
-    makeEnemy(0,-26,true,[{x:-4,z:-26},{x:4,z:-26},{x:4,z:-32},{x:-4,z:-32}],true);
+    // Stage 1 enemies with wider patrols
+    makeEnemy(-20,-15,false,[{x:-20,z:-15},{x:25,z:-15},{x:25,z:20},{x:-20,z:20}]);
+    makeEnemy(25,-30,false,[{x:25,z:-30},{x:25,z:-45},{x:-10,z:-45}]);
+    makeEnemy(-25,-30,false,[{x:-25,z:-30},{x:-25,z:-45},{x:10,z:-45}]);
+    makeEnemy(35,10,false,[{x:35,z:10},{x:50,z:10},{x:50,z:30},{x:35,z:30}]);
+    makeEnemy(-35,10,false,[{x:-35,z:10},{x:-50,z:10},{x:-50,z:30}]);
+    makeEnemy(0,-50,true,[{x:-10,z:-50},{x:10,z:-50},{x:10,z:-60},{x:-10,z:-60}],true);
   } else {
-    makeEnemy(10,10,false,[{x:5,z:8},{x:18,z:8},{x:18,z:18},{x:5,z:18}]);
-    makeEnemy(-10,10,false,[{x:-18,z:8},{x:-5,z:8},{x:-5,z:18},{x:-18,z:18}]);
-    makeEnemy(28,-12,false,[{x:24,z:-8},{x:36,z:-8},{x:36,z:-18},{x:24,z:-18}]);
-    makeEnemy(-28,-12,false,[{x:-36,z:-8},{x:-22,z:-8},{x:-22,z:-18},{x:-36,z:-18}]);
-    makeEnemy(10,-16,false,[{x:5,z:-14},{x:18,z:-14},{x:18,z:-24},{x:5,z:-24}]);
-    makeEnemy(-10,-16,false,[{x:-18,z:-14},{x:-5,z:-14},{x:-5,z:-24},{x:-18,z:-24}]);
-    makeEnemy(0,-10,false,[{x:-6,z:-8},{x:6,z:-8},{x:6,z:-18},{x:-6,z:-18}]);
-    makeEnemy(0,-34,true,[{x:-5,z:-32},{x:5,z:-32},{x:5,z:-42},{x:-5,z:-42}],true);
+    // Stage 2 enemies with wide patrol routes
+    makeEnemy(25,25,false,[{x:15,z:20},{x:45,z:20},{x:45,z:45},{x:15,z:45}]);
+    makeEnemy(-25,25,false,[{x:-45,z:20},{x:-15,z:20},{x:-15,z:45},{x:-45,z:45}]);
+    makeEnemy(60,-30,false,[{x:50,z:-20},{x:80,z:-20},{x:80,z:-40},{x:50,z:-40}]);
+    makeEnemy(-60,-30,false,[{x:-80,z:-20},{x:-50,z:-20},{x:-50,z:-40},{x:-80,z:-40}]);
+    makeEnemy(30,-40,false,[{x:20,z:-35},{x:45,z:-35},{x:45,z:-50},{x:20,z:-50}]);
+    makeEnemy(-30,-40,false,[{x:-45,z:-35},{x:-15,z:-35},{x:-15,z:-50},{x:-45,z:-50}]);
+    makeEnemy(0,-30,false,[{x:-20,z:-25},{x:20,z:-25},{x:20,z:-40},{x:-20,z:-40}]);
+    makeEnemy(0,60,true,[{x:-15,z:55},{x:15,z:55},{x:15,z:70},{x:-15,z:70}],true);
   }
 }
 
@@ -966,7 +1040,7 @@ function gameLoop() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  PLAYER UPDATE — no wall jump, jump while moving, attack while moving
+//  PLAYER UPDATE - FIXED: Proper double jump while moving
 // ══════════════════════════════════════════════════════════════
 function updatePlayer(dt) {
   const P = NM.player;
@@ -1017,40 +1091,38 @@ function updatePlayer(dt) {
                  : P.isCrouching ? P.speed * 0.38
                  : P.speed;
 
-  // ── Horizontal velocity ──
-  // Identical acceleration on ground and in air — full air control
+  // ── Horizontal velocity (full air control) ──
   if (hasInput) {
     P.facingAngle = Math.atan2(mx, mz);
-    P.velocity.x = lerp(P.velocity.x, mx * topSpeed, Math.min(1, 26 * dt));
-    P.velocity.z = lerp(P.velocity.z, mz * topSpeed, Math.min(1, 26 * dt));
+    P.velocity.x = lerp(P.velocity.x, mx * topSpeed, Math.min(1, 28 * dt));
+    P.velocity.z = lerp(P.velocity.z, mz * topSpeed, Math.min(1, 28 * dt));
   } else {
-    // Ground: stop fast. Air: drift slowly
-    const friction = P.onGround ? 38 : 4;
+    const friction = P.onGround ? 40 : 5;
     P.velocity.x = lerp(P.velocity.x, 0, Math.min(1, friction * dt));
     P.velocity.z = lerp(P.velocity.z, 0, Math.min(1, friction * dt));
   }
 
-  // ── Gravity (always on) ──
-  P.yVel -= 30 * dt;           // constant gravity
-  P.yVel  = Math.max(P.yVel, -35); // terminal velocity
+  // ── Gravity ──
+  P.yVel -= 28 * dt;
+  P.yVel = Math.max(P.yVel, -40);
 
-  // ── Jump input: edge-detect space / mobile button ──
+  // ── Jump input handling - FIXED: Proper double jump while moving ──
   const jumpPressed = NM.btnState.jumpJustPressed || (NM.keys[' '] && !P._prevSpace);
   P._prevSpace = NM.keys[' '];
   NM.btnState.jumpJustPressed = false;
 
   if (jumpPressed) {
     if (P.onGround) {
-      // First jump
-      P.yVel = 12;
-      P.jumpsLeft = 1;   // one more jump available
+      // First jump - always possible on ground
+      P.yVel = 13.5;
+      P.jumpsLeft = 2; // Give both jumps on ground start
       P.onGround = false;
       sfxJump();
     } else if (P.jumpsLeft > 0) {
-      // Second jump (double jump) — works any time in the air
-      P.yVel = 11;
-      P.jumpsLeft = 0;   // no more jumps
-      spawnDoubleJumpFX(P.mesh.position.clone());
+      // Double jump - works even while moving horizontally
+      P.yVel = 12;
+      P.jumpsLeft--;
+      spawnDoubleJumpFX(P.mesh.position.clone().add(new THREE.Vector3(0, 0.5, 0)));
       sfxJump();
     }
   }
@@ -1084,21 +1156,21 @@ function updatePlayer(dt) {
   to.z += P.velocity.z * dt;
   to.y += P.yVel       * dt;
 
-  const sw = sweepPlayer(from, to, P.yVel);
-  P.mesh.position.copy(sw.pos);
+  const result = sweepPlayer(from, to, P.yVel);
+  P.mesh.position.copy(result.pos);
+  P.yVel = result.yVel !== undefined ? result.yVel : P.yVel;
 
-  if (sw.onGround) {
-    if (!P.onGround) {
-      // Just landed
-      P.jumpsLeft = 2;              // reset both jumps on landing
-      if (P._fallSpd > 12) sfxFootstep(0.3);
-    }
-    P.onGround = true;
-    P.yVel = 0;
+  // Ground state handling
+  const wasOnGround = P.onGround;
+  P.onGround = result.onGround;
+
+  if (P.onGround && !wasOnGround) {
+    // Just landed - reset jumps
+    P.jumpsLeft = 2;
+    if (P._fallSpd > 12) sfxFootstep(0.3);
     P._fallSpd = 0;
-  } else {
-    P._fallSpd = Math.abs(P.yVel);
-    P.onGround = false;
+  } else if (!P.onGround) {
+    P._fallSpd = Math.max(P._fallSpd, Math.abs(P.yVel));
   }
 
   // ── Facing ──
@@ -1120,9 +1192,8 @@ function updatePlayer(dt) {
   updateStealthGlow();
 }
 
-
 // ══════════════════════════════════════════════════════════════
-//  CAMERA — auto pull-in to avoid clipping
+//  CAMERA — FIXED: Better handling when behind geometry
 // ══════════════════════════════════════════════════════════════
 function updateCamera(dt) {
   if(!NM.player) return;
@@ -1130,7 +1201,7 @@ function updateCamera(dt) {
   const preset=NM.CAM_PRESETS[NM.camMode];
 
   NM.camYaw  -=NM.mouse.dx*0.003;
-  NM.camPitch =clamp(NM.camPitch-NM.mouse.dy*0.003,-0.05,0.75);
+  NM.camPitch =clamp(NM.camPitch-NM.mouse.dy*0.003,-0.05,0.85);
   NM.mouse.dx=0; NM.mouse.dy=0;
   NM.camPitch=lerp(NM.camPitch,preset[1],dt*0.7);
   NM.camera.fov=lerp(NM.camera.fov,preset[2],dt*5);
@@ -1144,36 +1215,40 @@ function updateCamera(dt) {
     return;
   }
   NM.player.mesh.visible=true;
-  const target=new THREE.Vector3(P.x,P.y+1.25,P.z);
-  NM.camTarget.lerp(target,dt*11);
+  const target=new THREE.Vector3(P.x,P.y+1.35,P.z);
+  NM.camTarget.lerp(target,dt*12);
 
-  // Pull camera in if geometry blocks the view
+  // Camera distance with auto pull-in to avoid clipping
   const maxDist=NM.camDist<0?preset[0]:NM.camDist;
-  let useDist=maxDist;
-  for(let test=maxDist;test>1.5;test-=0.4){
-    const tp=new THREE.Vector3(
-      NM.camTarget.x-Math.sin(NM.camYaw)*Math.cos(NM.camPitch)*test,
-      NM.camTarget.y+Math.sin(NM.camPitch)*test,
-      NM.camTarget.z-Math.cos(NM.camYaw)*Math.cos(NM.camPitch)*test
-    );
-    if(isCamClear(NM.camTarget,tp)){useDist=test;break;}
+  let useDist = maxDist;
+  
+  // Only pull in if we're very close to geometry
+  const testPos = new THREE.Vector3(
+    NM.camTarget.x - Math.sin(NM.camYaw) * Math.cos(NM.camPitch) * maxDist,
+    NM.camTarget.y + Math.sin(NM.camPitch) * maxDist,
+    NM.camTarget.z - Math.cos(NM.camYaw) * Math.cos(NM.camPitch) * maxDist
+  );
+  
+  if (!isCamClear(NM.camTarget, testPos)) {
+    useDist = Math.max(2.5, maxDist * 0.7);
   }
 
   const cp=new THREE.Vector3(
-    NM.camTarget.x-Math.sin(NM.camYaw)*Math.cos(NM.camPitch)*useDist,
-    NM.camTarget.y+Math.sin(NM.camPitch)*useDist,
-    NM.camTarget.z-Math.cos(NM.camYaw)*Math.cos(NM.camPitch)*useDist
+    NM.camTarget.x - Math.sin(NM.camYaw) * Math.cos(NM.camPitch) * useDist,
+    NM.camTarget.y + Math.sin(NM.camPitch) * useDist,
+    NM.camTarget.z - Math.cos(NM.camYaw) * Math.cos(NM.camPitch) * useDist
   );
+  
   if(cp.y<0.4) cp.y=0.4;
-  NM.camera.position.lerp(cp,dt*13);
+  NM.camera.position.lerp(cp,dt*14);
   NM.camera.lookAt(NM.camTarget);
 
-  // Fade player when camera too close
+  // Transparent player when camera too close
   const cd=NM.camera.position.distanceTo(P);
   NM.player.mesh.traverse(m=>{
     if(m.isMesh&&m.material){
       m.material.transparent=true;
-      m.material.opacity=lerp(m.material.opacity??1, cd<2.5?Math.max(0,(cd-1)/1.5):1, 0.15);
+      m.material.opacity=lerp(m.material.opacity??1, cd<2.0?Math.max(0.3,(cd-1)):1, 0.15);
     }
   });
 }
@@ -1181,21 +1256,26 @@ function updateCamera(dt) {
 function isCamClear(from,to){
   const dir=new THREE.Vector3().subVectors(to,from);
   const len=dir.length(); dir.normalize();
+  
+  // Only check tall colliders that would actually block view
   for(const c of NM.colliders){
     const h=c.maxY-c.minY;
-    if(h<1.2) continue; // skip thin slabs
-    const tx1=(dir.x>0?c.minX:c.maxX-0.001-from.x)/(dir.x||0.0001);
-    const tx2=(dir.x>0?c.maxX:c.minX-0.001-from.x)/(dir.x||0.0001);
-    // simplified: just check if box is in the path
-    const tMinX=((dir.x>0?c.minX:c.maxX)-from.x)/(dir.x||0.0001);
-    const tMaxX=((dir.x>0?c.maxX:c.minX)-from.x)/(dir.x||0.0001);
-    const tMinY=((dir.y>0?c.minY:c.maxY)-from.y)/(dir.y||0.0001);
-    const tMaxY=((dir.y>0?c.maxY:c.minY)-from.y)/(dir.y||0.0001);
-    const tMinZ=((dir.z>0?c.minZ:c.maxZ)-from.z)/(dir.z||0.0001);
-    const tMaxZ=((dir.z>0?c.maxZ:c.minZ)-from.z)/(dir.z||0.0001);
-    const tEnter=Math.max(tMinX,tMinY,tMinZ);
-    const tExit=Math.min(tMaxX,tMaxY,tMaxZ);
-    if(tEnter<tExit&&tEnter>0.1&&tEnter<len-0.2) return false;
+    if(h < 1.5) continue; // Skip low walls
+    
+    // Simple ray-box intersection
+    const t1 = (c.minX - from.x) / dir.x;
+    const t2 = (c.maxX - from.x) / dir.x;
+    const t3 = (c.minY - from.y) / dir.y;
+    const t4 = (c.maxY - from.y) / dir.y;
+    const t5 = (c.minZ - from.z) / dir.z;
+    const t6 = (c.maxZ - from.z) / dir.z;
+    
+    const tmin = Math.max(Math.min(t1,t2), Math.min(t3,t4), Math.min(t5,t6));
+    const tmax = Math.min(Math.max(t1,t2), Math.max(t3,t4), Math.max(t5,t6));
+    
+    if (tmax >= tmin && tmin > 0.1 && tmin < len - 0.5) {
+      return false;
+    }
   }
   return true;
 }
@@ -1216,7 +1296,7 @@ function doAttack(){
   P.comboCount=Math.min(P.comboCount+1,5); P.comboTimer=1.1;
   sfxSwordSwing();
   setTimeout(()=>{
-    const RANGE=2.3, ANG=Math.PI*0.55;
+    const RANGE=2.5, ANG=Math.PI*0.6;
     NM.enemies.forEach(e=>{
       if(e.state==='DEAD') return;
       const toE=new THREE.Vector3().subVectors(e.mesh.position,P.mesh.position);
@@ -1236,7 +1316,7 @@ function getStealthTarget(){
   if(!P) return null;
   return NM.enemies.find(e=>{
     if(e.state==='DEAD'||e.state==='CHASE'||e.state==='ATTACK'||e.alertLevel>0.4) return false;
-    return P.mesh.position.distanceTo(e.mesh.position)<1.9;
+    return P.mesh.position.distanceTo(e.mesh.position)<2.2;
   })||null;
 }
 
@@ -1299,7 +1379,7 @@ function hurtPlayer(dmg){
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ENEMY AI
+//  ENEMY AI (unchanged)
 // ══════════════════════════════════════════════════════════════
 function updateEnemies(dt){
   NM.enemies.forEach(e=>{
@@ -1514,13 +1594,13 @@ function updateZoneHint(pos){
   let hint='';
   const st=NM.currentStage;
   if(st===0){
-    if(pos.z<-14)     hint='⬧ JUMP ZONE — Practice platforming';
-    else if(pos.x>10) hint='⬧ ATTACK ZONE — Attack the dummy targets';
-    else if(pos.z>10) hint='⬧ STEALTH ZONE — Sneak up from behind';
+    if(pos.z<-30)     hint='⬧ JUMP ZONE — Practice platforming';
+    else if(pos.x>30) hint='⬧ ATTACK ZONE — Attack the dummy targets';
+    else if(pos.z>30) hint='⬧ STEALTH ZONE — Sneak up from behind';
     else               hint='⬧ TRAINING GROUNDS — Move with WASD / Joystick';
   } else {
-    if(pos.z<-20)      hint='⬧ DANGER — Boss territory ahead';
-    else if(pos.z<-10) hint='⬧ Patrol guards ahead — use cover';
+    if(pos.z<-40)      hint='⬧ DANGER — Boss territory ahead';
+    else if(pos.z<-20) hint='⬧ Patrol guards ahead — use cover';
   }
   el.textContent=hint;
   el.style.opacity=hint?'1':'0';
@@ -1579,41 +1659,96 @@ function updateHUD(){
 }
 
 // ══════════════════════════════════════════════════════════════
-//  MINIMAP
+//  MINIMAP - ENHANCED
 // ══════════════════════════════════════════════════════════════
-function initMinimap(){
-  const cv=document.getElementById('minimap');
-  cv.width=130;cv.height=130;cv.style.display='block';
-}
-
 function updateMinimap(){
   const cv=document.getElementById('minimap');
   if(!cv||!NM.player) return;
   const ctx=cv.getContext('2d');
-  const W=130,H=130,WORLD=110,scale=W/WORLD,ox=W/2,oz=H/2;
+  const W=180,H=180;
+  const bounds = NM.levelBounds;
+  const worldWidth = bounds.maxX - bounds.minX;
+  const worldHeight = bounds.maxZ - bounds.minZ;
+  const scale = Math.min(W/worldWidth, H/worldHeight) * 0.9;
+  const offsetX = (W - worldWidth * scale) / 2;
+  const offsetY = (H - worldHeight * scale) / 2;
+  
+  function worldToMap(x, z) {
+    return {
+      x: offsetX + (x - bounds.minX) * scale,
+      y: offsetY + (z - bounds.minZ) * scale
+    };
+  }
+
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,W,H);
+  
+  // Background
+  ctx.fillStyle='rgba(0,0,0,0.85)';
+  ctx.fillRect(0,0,W,H);
+  
+  // Border
+  ctx.strokeStyle='#e8c97e';
+  ctx.lineWidth=2;
+  ctx.strokeRect(2,2,W-4,H-4);
+
+  // Draw walls and platforms
+  ctx.fillStyle='rgba(80,60,100,0.6)';
   for(const c of NM.colliders){
     const h=c.maxY-c.minY;
-    if(h<0.45) continue;
-    const sw=Math.max(1,(c.maxX-c.minX)*scale),sh=Math.max(1,(c.maxZ-c.minZ)*scale);
-    ctx.fillStyle=h>3?'rgba(90,60,130,0.88)':h>1?'rgba(80,65,50,0.8)':'rgba(45,40,55,0.8)';
-    ctx.fillRect(ox+c.minX*scale,oz+c.minZ*scale,sw,sh);
+    if(h<0.8) continue; // Skip ground
+    const p1 = worldToMap(c.minX, c.minZ);
+    const p2 = worldToMap(c.maxX, c.maxZ);
+    const w = p2.x - p1.x;
+    const h2 = p2.y - p1.y;
+    if(w>2 && h2>2) {
+      ctx.fillStyle = h>3 ? 'rgba(140,80,180,0.7)' : 'rgba(100,70,50,0.6)';
+      ctx.fillRect(p1.x, p1.y, w, h2);
+    }
   }
+
+  // Enemies
   NM.enemies.forEach(e=>{
     if(e.state==='DEAD') return;
-    const ex=ox+e.mesh.position.x*scale,ez=oz+e.mesh.position.z*scale;
-    ctx.beginPath();ctx.arc(ex,ez,e.isTarget?4:2.5,0,Math.PI*2);
-    ctx.fillStyle=e.state==='PATROL'?'#ffaa44':'#ff2200';ctx.fill();
+    const pos = worldToMap(e.mesh.position.x, e.mesh.position.z);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, e.isBoss?5:3, 0, Math.PI*2);
+    ctx.fillStyle = e.state==='PATROL' ? '#ffaa44' : '#ff4444';
+    ctx.fill();
+    ctx.strokeStyle='#fff';
+    ctx.lineWidth=1;
+    ctx.stroke();
   });
-  const px=ox+NM.player.mesh.position.x*scale,pz=oz+NM.player.mesh.position.z*scale;
-  ctx.beginPath();ctx.arc(px,pz,4,0,Math.PI*2);ctx.fillStyle='#88ccff';ctx.fill();
-  const a=NM.player.facingAngle||0;
-  ctx.beginPath();ctx.moveTo(px+Math.sin(a)*7,pz+Math.cos(a)*7);
-  ctx.lineTo(px+Math.sin(a-2.4)*3,pz+Math.cos(a-2.4)*3);
-  ctx.lineTo(px+Math.sin(a+2.4)*3,pz+Math.cos(a+2.4)*3);
-  ctx.closePath();ctx.fillStyle='#fff';ctx.fill();
-  ctx.fillStyle='rgba(232,201,126,0.45)';ctx.font='7px monospace';ctx.fillText('MAP',4,10);
+
+  // Player
+  const playerPos = worldToMap(NM.player.mesh.position.x, NM.player.mesh.position.z);
+  ctx.beginPath();
+  ctx.arc(playerPos.x, playerPos.y, 6, 0, Math.PI*2);
+  ctx.fillStyle='#88ccff';
+  ctx.fill();
+  ctx.strokeStyle='#fff';
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  // Player direction
+  ctx.beginPath();
+  ctx.moveTo(playerPos.x, playerPos.y);
+  ctx.lineTo(
+    playerPos.x + Math.sin(NM.player.facingAngle) * 12,
+    playerPos.y + Math.cos(NM.player.facingAngle) * 12
+  );
+  ctx.strokeStyle='#ffffff';
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  // Title
+  ctx.fillStyle='#e8c97e';
+  ctx.font='bold 10px monospace';
+  ctx.fillText('MINIMAP', 10, 20);
+  
+  // Stage indicator
+  ctx.font='bold 8px monospace';
+  ctx.fillStyle='#aaa';
+  ctx.fillText('STAGE ' + (NM.currentStage===0?'TUT':NM.currentStage), W-70, 20);
 }
 
 // ══════════════════════════════════════════════════════════════

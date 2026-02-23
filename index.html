@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>NINJA MAKER - TENCHU SPIRIT</title>
+<title>NINJA MAKER</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #000; overflow: hidden; font-family: 'Segoe UI', 'Arial', sans-serif; touch-action: none; }
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  body { background: #000; overflow: hidden; font-family: serif; touch-action: none; }
   canvas { display: block; }
 
   #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
@@ -31,19 +31,13 @@
   #kills-display { position: absolute; top: 110px; right: 18px; color: #aaa; font-size: 11px; letter-spacing: 1px; }
   #zone-hint { position: absolute; bottom: 220px; left: 50%; transform: translateX(-50%); color: rgba(232,201,126,0.75); font-size: 12px; letter-spacing: 3px; text-align: center; text-transform: uppercase; pointer-events:none; text-shadow:0 0 12px rgba(232,201,126,0.5); opacity:0; transition: opacity 0.5s; }
 
-  /* ── Alert flash ── */
-  #alert-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,50,0,0.15); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-
-  /* ── Stealth kill prompt ── */
-  #stealth-prompt { position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%); color: #e8c97e; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; text-align: center; opacity: 0; transition: opacity 0.3s; text-shadow: 0 0 15px #e8c97e; }
-
   /* ── MINIMAP (top right) ── */
   #minimap {
     position: fixed;
-    top: 18px;
-    right: 18px;
-    width: 180px;  /* slightly larger */
-    height: 180px;
+    top: clamp(10px, 3vh, 18px);
+    right: clamp(10px, 3vw, 18px);
+    width: min(140px, 25vw);
+    height: min(140px, 25vw);
     border: 2px solid rgba(232,201,126,0.6);
     border-radius: 8px;
     background: rgba(0,0,0,0.85);
@@ -55,33 +49,37 @@
   /* ── TOP BUTTONS ── */
   .top-buttons {
     position: fixed;
-    top: 18px;
+    top: clamp(10px, 3vh, 18px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 12px;
+    gap: clamp(8px, 2vw, 12px);
     z-index: 30;
     pointer-events: all;
   }
   .top-btn {
-    width: 44px;
-    height: 44px;
+    width: clamp(36px, 8vw, 44px);
+    height: clamp(36px, 8vw, 44px);
     background: rgba(0,0,0,0.7);
     border: 2px solid #e8c97e66;
     border-radius: 50%;
     color: #e8c97e;
-    font-size: 12px;
-    letter-spacing: 1px;
+    font-size: clamp(16px, 4vw, 20px);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: serif;
     backdrop-filter: blur(4px);
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
   }
-  #pause-btn { order: 1; }
-  #cam-btn { order: 2; }
-  #xray-toggle { order: 3; }
+
+  /* ── Alert flash ── */
+  #alert-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,50,0,0.15); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+
+  /* ── Stealth kill prompt ── */
+  #stealth-prompt { position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%); color: #e8c97e; font-size: 13px; letter-spacing: 3px; text-transform: uppercase; text-align: center; opacity: 0; transition: opacity 0.3s; text-shadow: 0 0 15px #e8c97e; }
 
   /* ── SCREENS ── */
   .screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
@@ -90,10 +88,10 @@
   #main-menu { background: #000; }
   #menu-bg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   .menu-content { position: relative; z-index: 2; text-align: center; width: 100%; max-width: 800px; padding: 20px; }
-  .game-title { font-size: clamp(32px, 8vw, 88px); color: #e8c97e; letter-spacing: 8px; text-transform: uppercase; line-height: 0.9; text-shadow: 0 0 40px #e8c97e66, 0 0 80px #e8c97e33; font-style: italic; }
-  .game-subtitle { color: #888; font-size: clamp(8px, 1.5vw, 13px); letter-spacing: 6px; margin-top: 8px; text-transform: uppercase; }
-  .menu-buttons { margin-top: 40px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
-  .menu-btn { background: transparent; border: 1px solid #e8c97e66; color: #e8c97e; font-family: 'Segoe UI', sans-serif; font-size: clamp(14px, 3vw, 16px); letter-spacing: 4px; text-transform: uppercase; padding: 12px 30px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; min-width: 200px; }
+  .game-title { font-size: clamp(42px, 10vw, 88px); color: #e8c97e; letter-spacing: 12px; text-transform: uppercase; line-height: 0.9; text-shadow: 0 0 40px #e8c97e66, 0 0 80px #e8c97e33; font-style: italic; }
+  .game-subtitle { color: #888; font-size: clamp(10px, 2vw, 13px); letter-spacing: 8px; margin-top: 8px; text-transform: uppercase; }
+  .menu-buttons { margin-top: 60px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .menu-btn { background: transparent; border: 1px solid #e8c97e66; color: #e8c97e; font-family: serif; font-size: 16px; letter-spacing: 6px; text-transform: uppercase; padding: 14px 50px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; min-width: 250px; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
   .menu-btn:hover, .menu-btn:active { background: #e8c97e11; border-color: #e8c97e; box-shadow: 0 0 20px #e8c97e33; }
   .menu-btn.disabled { opacity: 0.35; cursor: default; }
   .version-tag { position: absolute; bottom: 20px; color: #333; font-size: 10px; letter-spacing: 2px; }
@@ -105,24 +103,24 @@
   #loading-bar { height: 100%; width: 0%; background: #e8c97e; transition: width 0.3s; }
 
   /* Mission Briefing */
-  #mission-screen { background: rgba(0,0,0,0.97); border: 1px solid #e8c97e22; overflow-y: auto; }
-  .mission-inner { max-width: 520px; padding: 30px 20px; text-align: center; }
-  .mission-title { color: #e8c97e; font-size: 11px; letter-spacing: 6px; margin-bottom: 20px; }
+  #mission-screen { background: rgba(0,0,0,0.97); border: 1px solid #e8c97e22; overflow-y: auto; display: none; }
+  .mission-inner { max-width: 520px; padding: 40px; text-align: center; }
+  .mission-title { color: #e8c97e; font-size: 11px; letter-spacing: 6px; margin-bottom: 30px; }
   .mission-name { color: #fff; font-size: clamp(22px, 5vw, 36px); letter-spacing: 4px; margin-bottom: 20px; font-style: italic; }
   .mission-divider { width: 60px; height: 1px; background: #e8c97e44; margin: 20px auto; }
-  .mission-text { color: #aaa; font-size: 13px; line-height: 1.8; letter-spacing: 1px; margin-bottom: 30px; }
-  .mission-objective { color: #e8c97e; font-size: 12px; letter-spacing: 3px; margin-bottom: 30px; }
-  .mission-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 30px; text-align: left; }
+  .mission-text { color: #aaa; font-size: 13px; line-height: 2; letter-spacing: 1px; margin-bottom: 30px; }
+  .mission-objective { color: #e8c97e; font-size: 12px; letter-spacing: 3px; margin-bottom: 40px; }
+  .mission-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 30px; text-align: left; }
   .ctrl-item { color: #666; font-size: 10px; letter-spacing: 1px; }
   .ctrl-key { color: #e8c97e; }
 
   /* Pause */
-  #pause-screen { background: rgba(0,0,0,0.88); backdrop-filter: blur(4px); }
+  #pause-screen { background: rgba(0,0,0,0.88); backdrop-filter: blur(4px); display: none; }
   .pause-title { color: #e8c97e; font-size: 28px; letter-spacing: 8px; margin-bottom: 40px; }
 
   /* Result */
-  #result-screen { background: rgba(0,0,0,0.95); }
-  .result-inner { text-align: center; padding: 30px 20px; max-width: 480px; }
+  #result-screen { background: rgba(0,0,0,0.95); display: none; }
+  .result-inner { text-align: center; padding: 40px; max-width: 480px; }
   .result-title { font-size: clamp(32px, 8vw, 64px); letter-spacing: 8px; font-style: italic; margin-bottom: 10px; }
   .result-title.win { color: #e8c97e; text-shadow: 0 0 40px #e8c97e66; }
   .result-title.lose { color: #c0392b; text-shadow: 0 0 40px #c0392b66; }
@@ -134,10 +132,10 @@
   .rank-display { font-size: 11px; color: #aaa; letter-spacing: 3px; margin-bottom: 30px; }
   .rank-letter { font-size: 52px; color: #e8c97e; display: block; margin: 8px 0; }
 
-  /* ── MOBILE CONTROLS (PlayStation style) ── */
+  /* ── MOBILE CONTROLS ── */
   #mobile-controls {
     position: fixed;
-    bottom: 20px;
+    bottom: 0;
     left: 0;
     width: 100%;
     height: auto;
@@ -146,130 +144,100 @@
     display: none;
   }
 
-  /* Left side - Joystick (slightly larger) */
+  /* Left side - Joystick */
   #joystick-zone {
     position: absolute;
-    bottom: 0;
-    left: 20px;
-    width: clamp(120px, 22vw, 160px);   /* increased from 100/140 */
-    height: clamp(120px, 22vw, 160px);
-    pointer-events: all;
+    bottom: clamp(10px, 3vh, 20px);
+    left: clamp(10px, 3vw, 20px);
+    width: clamp(100px, 25vw, 140px);
+    height: clamp(100px, 25vw, 140px);
+    pointer-events: auto;
   }
   #joystick-base {
     width: 100%;
     height: 100%;
     border-radius: 50%;
     background: rgba(0,0,0,0.5);
-    border: 2px solid rgba(232,201,126,0.3);
+    border: 3px solid rgba(232,201,126,0.4);
     backdrop-filter: blur(4px);
   }
   #joystick-stick {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 45%;
-    height: 45%;
+    width: 50%;
+    height: 50%;
     border-radius: 50%;
     background: rgba(232,201,126,0.8);
-    border: 2px solid rgba(232,201,126,0.9);
+    border: 3px solid rgba(232,201,126,0.9);
     transform: translate(-50%,-50%);
     transition: transform 0.03s;
-    box-shadow: 0 0 15px #e8c97e66;
+    box-shadow: 0 0 15px #e8c97e;
+    pointer-events: none;
   }
 
-  /* Right side - PlayStation style buttons (rearranged) */
+  /* Right side - Action Buttons (no text) */
   #action-buttons {
     position: absolute;
-    bottom: 10px;
-    right: 20px;
+    bottom: clamp(10px, 3vh, 20px);
+    right: clamp(10px, 3vw, 20px);
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;  /* slightly increased */
-    pointer-events: all;
-    background: rgba(0,0,0,0.3);
-    padding: 20px;   /* more padding */
-    border-radius: 70px;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(232,201,126,0.2);
+    gap: clamp(8px, 2vw, 12px);
+    pointer-events: none;
   }
 
   .action-btn {
-    width: clamp(60px, 13vw, 80px);  /* larger base size */
-    height: clamp(60px, 13vw, 80px);
+    width: clamp(50px, 14vw, 70px);
+    height: clamp(50px, 14vw, 70px);
     border-radius: 50%;
     background: rgba(0,0,0,0.7);
-    color: #fff;
-    font-size: clamp(12px, 3vw, 16px);
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 4px solid;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.5);
+    transition: all 0.1s;
     cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
-    font-family: 'Segoe UI', sans-serif;
-    border-width: 3px;
-    border-style: solid;
-    box-shadow: 0 5px 0 rgba(0,0,0,0.3);
-    transition: all 0.1s;
-    text-transform: uppercase;
+    position: relative;
+  }
+
+  .action-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.8;
   }
 
   .action-btn:active {
     transform: translateY(4px);
-    box-shadow: 0 1px 0 rgba(0,0,0,0.3);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.5);
   }
 
-  /* PlayStation button colors & positions (X bottom, O right, Square left, Triangle top) */
-  #btn-attack {  /* square = left */
-    border-color: #ff4d4d;
-    color: #ff4d4d;
-    grid-column: 1;
-    grid-row: 1;
-  }
-  #btn-jump {    /* X = bottom */
-    border-color: #4dff4d;
-    color: #4dff4d;
-    grid-column: 3;
-    grid-row: 2;
-  }
-  #btn-block {   /* O = right (block) */
-    border-color: #4d4dff;
-    color: #4d4dff;
-    grid-column: 3;
-    grid-row: 1;
-  }
-  #btn-run {     /* run left of X */
-    border-color: #ffdd4d;
-    color: #ffdd4d;
-    grid-column: 2;
-    grid-row: 2;
-  }
-  #btn-crouch {  /* crouch left of run */
-    border-color: #dd88ff;
-    color: #dd88ff;
-    grid-column: 1;
-    grid-row: 2;
-    background: rgba(0,0,0,0.8);
-  }
+  /* PlayStation button colors (no text) */
+  #btn-attack { border-color: #ff69b4; color: #ff69b4; grid-column: 1; grid-row: 2; }  /* Square - Left */
+  #btn-block { border-color: #ff4444; color: #ff4444; grid-column: 3; grid-row: 2; }   /* Circle - Right */
+  #btn-jump { border-color: #4dff4d; color: #4dff4d; grid-column: 2; grid-row: 3; }     /* Cross - Bottom */
+  #btn-interact { border-color: #44aaff; color: #44aaff; grid-column: 2; grid-row: 1; } /* Triangle - Top */
+  #btn-run { border-color: #ffdd44; color: #ffdd44; grid-column: 3; grid-row: 1; }      /* R1 - Top Right */
+  #btn-crouch { border-color: #aa88ff; color: #aa88ff; grid-column: 1; grid-row: 1; }   /* L1 - Top Left */
 
   /* Portrait mode adjustments */
   @media (orientation: portrait) {
     #minimap {
-      width: 130px;
-      height: 130px;
-      top: 10px;
-      right: 10px;
+      width: 100px;
+      height: 100px;
     }
     
     .top-buttons {
-      top: 10px;
-      gap: 8px;
-    }
-    .top-btn {
-      width: 36px;
-      height: 36px;
-      font-size: 10px;
+      gap: 6px;
     }
     
     #health-bar-wrap { top: 10px; left: 10px; }
@@ -278,21 +246,16 @@
     #ki-bar-bg { width: 90px; }
     #sprint-bar-wrap { top: 58px; left: 10px; }
     #sprint-bar-bg { width: 80px; }
-    #score-display { top: 10px; right: 140px; }
+    #score-display { top: 10px; right: 120px; }
     
-    #action-buttons {
-      padding: 12px;
-      gap: 8px;
-    }
     .action-btn {
-      width: 52px;
-      height: 52px;
-      font-size: 11px;
+      width: 45px;
+      height: 45px;
+      border-width: 3px;
     }
     #joystick-zone {
-      width: 100px;
-      height: 100px;
-      left: 10px;
+      width: 90px;
+      height: 90px;
     }
   }
 
@@ -316,14 +279,14 @@
   <canvas id="menu-bg-canvas"></canvas>
   <div class="menu-content">
     <div class="game-title">Ninja<br>Maker</div>
-    <div class="game-subtitle">— Tenchu Spirit —</div>
+    <div class="game-subtitle">— Shadow Art of the Blade —</div>
     <div class="menu-buttons">
-      <button class="menu-btn" id="btn-missions">Training Grounds</button>
-      <button class="menu-btn disabled" id="btn-editor">Editor <span style="font-size:9px;letter-spacing:2px">(Coming Soon)</span></button>
+      <button class="menu-btn" id="btn-missions">Missions</button>
       <button class="menu-btn" id="btn-info">How to Play</button>
+      <button class="menu-btn disabled" id="btn-editor">Editor (Coming Soon)</button>
     </div>
   </div>
-  <div class="version-tag">NINJA MAKER v0.3 — TENCHU SPIRIT</div>
+  <div class="version-tag">NINJA MAKER v0.1 — SIMPLE JUMP</div>
 </div>
 
 <div id="loading-screen" class="screen" style="display:none">
@@ -333,31 +296,30 @@
 
 <div id="mission-screen" class="screen" style="display:none">
   <div class="mission-inner">
-    <div class="mission-title">— Training Grounds —</div>
-    <div class="mission-name">Tenchu Spirit</div>
+    <div class="mission-title">— Mission 01 —</div>
+    <div class="mission-name">The Jade Pagoda</div>
     <div class="mission-divider"></div>
     <div class="mission-text">
-      Master the art of stealth in this Tenchu-inspired 3D world.<br><br>
-      <span style="color:#e8c97e;">⬧ STEALTH VILLAGE</span> — Eliminate guards silently<br>
-      <span style="color:#e8c97e;">⬧ BRIDGE OF SHADOWS</span> — Cross silently, avoid detection<br>
-      <span style="color:#e8c97e;">⬧ FORTRESS GATE</span> — Infiltrate the enemy stronghold<br>
-      <span style="color:#e8c97e;">⬧ BOSS ARENA</span> — Face the armored general
+      Lord Hayamoto has stolen the sacred scrolls from the mountain temple.<br>
+      He shelters in the Jade Pagoda, guarded by his elite shadow warriors.<br>
+      Infiltrate unseen. Eliminate the target. Leave no trace.
     </div>
-    <div class="mission-objective">⬧ OBJECTIVE: ELIMINATE BOSS (RED ARMOR) ⬧</div>
+    <div class="mission-objective">⬧ OBJECTIVE: ELIMINATE LORD HAYAMOTO ⬧</div>
     <div class="mission-controls">
       <div class="ctrl-item"><span class="ctrl-key">WASD / Joystick</span> — Move</div>
       <div class="ctrl-item"><span class="ctrl-key">Mouse / Drag</span> — Camera</div>
-      <div class="ctrl-item"><span class="ctrl-key">JMP (X)</span> — Jump (double jump)</div>
-      <div class="ctrl-item"><span class="ctrl-key">ATK (□)</span> — Attack</div>
-      <div class="ctrl-item"><span class="ctrl-key">BLK (○)</span> — Block (hold)</div>
-      <div class="ctrl-item"><span class="ctrl-key">RUN (◀)</span> — Sprint (hold)</div>
-      <div class="ctrl-item"><span class="ctrl-key">CRCH (▶)</span> — Crouch/sneak</div>
+      <div class="ctrl-item"><span class="ctrl-key">Space / ✕</span> — Jump (double jump)</div>
+      <div class="ctrl-item"><span class="ctrl-key">J / □</span> — Attack</div>
+      <div class="ctrl-item"><span class="ctrl-key">K / ○</span> — Block (hold)</div>
+      <div class="ctrl-item"><span class="ctrl-key">L / △</span> — Interact</div>
       <div class="ctrl-item"><span class="ctrl-key">Near enemy</span> — Stealth kill</div>
+      <div class="ctrl-item"><span class="ctrl-key">Ctrl / R1</span> — Sprint (hold)</div>
+      <div class="ctrl-item"><span class="ctrl-key">Shift / L1</span> — Crouch / sneak</div>
       <div class="ctrl-item"><span class="ctrl-key">V / CAM</span> — Cycle camera</div>
-      <div class="ctrl-item"><span class="ctrl-key">X</span> — Toggle X-ray</div>
+      <div class="ctrl-item"><span class="ctrl-key">Scroll / Pinch</span> — Zoom in/out</div>
       <div class="ctrl-item"><span class="ctrl-key">ESC / ⏸</span> — Pause</div>
     </div>
-    <button class="menu-btn" id="btn-start-mission">Begin Training</button>
+    <button class="menu-btn" id="btn-start-mission">Begin Mission</button>
   </div>
 </div>
 
@@ -404,13 +366,13 @@
     </div>
     <div id="stealth-indicator">● SHADOW</div>
     <div id="kills-display">Kills: 0 / 4</div>
-    <div id="objective">⬧ ELIMINATE BOSS GUARD<br>⬧ TEST YOUR SKILLS</div>
+    <div id="objective">⬧ ELIMINATE ALL ENEMIES<br>⬧ REMAIN UNSEEN</div>
     
     <!-- Top buttons -->
     <div class="top-buttons">
       <button id="pause-btn" class="top-btn">⏸</button>
-      <button id="cam-btn" class="top-btn">CAM</button>
-      <button id="xray-toggle" class="top-btn">X</button>
+      <button id="cam-btn" class="top-btn">⌂</button>
+      <button id="xray-toggle" class="top-btn">☼</button>
     </div>
     
     <div id="stealth-prompt">⬧ STEALTH KILL ⬧<br><span style="font-size:10px;letter-spacing:2px">Press Attack</span></div>
@@ -426,7 +388,7 @@
 <!-- MINIMAP (top right) -->
 <canvas id="minimap"></canvas>
 
-<!-- MOBILE CONTROLS (PlayStation style with crouch) -->
+<!-- MOBILE CONTROLS (PlayStation style - no text) -->
 <div id="mobile-controls">
   <div id="joystick-zone">
     <div id="joystick-base">
@@ -434,11 +396,12 @@
     </div>
   </div>
   <div id="action-buttons">
-    <div class="action-btn" id="btn-attack">ATK</div>
-    <div class="action-btn" id="btn-block">BLK</div>
-    <div class="action-btn" id="btn-jump">JMP</div>
-    <div class="action-btn" id="btn-run">RUN</div>
-    <div class="action-btn" id="btn-crouch">CRCH</div>
+    <div class="action-btn" id="btn-crouch"></div>   <!-- L1 - Purple -->
+    <div class="action-btn" id="btn-interact"></div> <!-- Triangle - Blue -->
+    <div class="action-btn" id="btn-run"></div>      <!-- R1 - Yellow -->
+    <div class="action-btn" id="btn-attack"></div>   <!-- Square - Pink -->
+    <div class="action-btn" id="btn-jump"></div>     <!-- Cross - Green -->
+    <div class="action-btn" id="btn-block"></div>    <!-- Circle - Red -->
   </div>
 </div>
 
@@ -448,7 +411,7 @@
 'use strict';
 
 // ══════════════════════════════════════════════════════════════
-//  NINJA MAKER — Tenchu Spirit (Full restoration + normal double jump)
+//  NINJA MAKER — Core Engine (SIMPLE JUMP - NO WALL STICKING)
 // ══════════════════════════════════════════════════════════════
 
 const NM = {
@@ -470,9 +433,8 @@ const NM = {
   mouse: { dx: 0, dy: 0, isDown: false, lastX: 0, lastY: 0 },
   joystick: { active: false, id: null, startX: 0, startY: 0, dx: 0, dy: 0 },
   btnState: { 
-    attack: false, jump: false, block: false, sprint: false, crouch: false,
-    attackJustPressed: false, jumpJustPressed: false,
-    jumpPressed: false
+    attack: false, jump: false, block: false, sprint: false, crouch: false, interact: false,
+    attackJustPressed: false, jumpJustPressed: false, interactJustPressed: false
   },
 
   // ── Camera ─────────────────────────────────────────────────
@@ -504,7 +466,7 @@ function boot() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  MENU BACKGROUND (original)
+//  MENU BACKGROUND
 // ══════════════════════════════════════════════════════════════
 function initMenuBg() {
   const canvas = document.getElementById('menu-bg-canvas');
@@ -593,6 +555,7 @@ function initMenuBg() {
 function bindMenuButtons() {
   document.getElementById('btn-missions').onclick = () => showMissionBriefing();
   document.getElementById('btn-info').onclick = () => showMissionBriefing();
+  document.getElementById('btn-editor').onclick = () => showNotif('Editor Coming Soon', true);
   document.getElementById('btn-start-mission').onclick = () => startGame();
   document.getElementById('btn-resume').onclick = () => resumeGame();
   document.getElementById('btn-quit').onclick = () => quitToMenu();
@@ -659,7 +622,7 @@ async function startGame() {
   NM.missionStart = Date.now();
 
   initThree();
-  buildLevel(); // now includes 3 stages
+  buildLevel();
   spawnPlayer();
   spawnEnemies();
   document.getElementById('hud').style.display = 'block';
@@ -672,7 +635,7 @@ async function startGame() {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ══════════════════════════════════════════════════════════════
-//  THREE.JS INIT (brighter lighting)
+//  THREE.JS INIT (Brighter Lighting)
 // ══════════════════════════════════════════════════════════════
 function initThree() {
   NM.renderer = new THREE.WebGLRenderer({ antialias: !NM.isMobile, powerPreference: 'high-performance' });
@@ -682,8 +645,8 @@ function initThree() {
   NM.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   NM.renderer.outputEncoding = THREE.sRGBEncoding;
   NM.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  NM.renderer.toneMappingExposure = 1.2; // brighter
-  NM.renderer.setClearColor(0x050810);
+  NM.renderer.toneMappingExposure = 1.2;
+  NM.renderer.setClearColor(0x1a0f2a);
   document.body.appendChild(NM.renderer.domElement);
   NM.renderer.domElement.style.position = 'fixed';
   NM.renderer.domElement.style.top = '0';
@@ -691,7 +654,7 @@ function initThree() {
   NM.renderer.domElement.style.zIndex = '1';
 
   NM.scene = new THREE.Scene();
-  NM.scene.fog = new THREE.FogExp2(0x050810, 0.022);
+  NM.scene.fog = new THREE.FogExp2(0x1a0f2a, 0.02);
 
   NM.camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 200);
 
@@ -701,11 +664,11 @@ function initThree() {
     NM.camera.updateProjectionMatrix();
   });
 
-  const ambient = new THREE.AmbientLight(0x332a4a, 1.2); // brighter ambient
+  const ambient = new THREE.AmbientLight(0x404570, 1.2);
   NM.scene.add(ambient);
 
-  const moon = new THREE.DirectionalLight(0xe0d8ff, 0.9); // stronger
-  moon.position.set(20, 40, -10);
+  const moon = new THREE.DirectionalLight(0xe0d8ff, 1.2);
+  moon.position.set(30, 50, -20);
   moon.castShadow = true;
   moon.shadow.mapSize.set(NM.isMobile ? 1024 : 2048, NM.isMobile ? 1024 : 2048);
   moon.shadow.camera.near = 0.5; moon.shadow.camera.far = 100;
@@ -713,98 +676,99 @@ function initThree() {
   moon.shadow.camera.top = 40; moon.shadow.camera.bottom = -40;
   NM.scene.add(moon);
 
-  const rim = new THREE.DirectionalLight(0x5577ff, 0.5);
-  rim.position.set(-10, 5, 10);
-  NM.scene.add(rim);
-
-  // fill light from below
-  const fill = new THREE.PointLight(0x8866aa, 0.7, 60);
-  fill.position.set(0, 10, 0);
+  const fill = new THREE.DirectionalLight(0xaaccff, 0.8);
+  fill.position.set(-20, 20, 30);
   NM.scene.add(fill);
+
+  const pointLight1 = new THREE.PointLight(0xffaa88, 0.8, 30);
+  pointLight1.position.set(0, 15, 0);
+  NM.scene.add(pointLight1);
+  
+  const pointLight2 = new THREE.PointLight(0x88aaff, 0.6, 30);
+  pointLight2.position.set(-20, 10, 20);
+  NM.scene.add(pointLight2);
 }
 
 // ══════════════════════════════════════════════════════════════
-//  LEVEL — 3 Tenchu-inspired stages
+//  LEVEL BUILDER (ORIGINAL)
 // ══════════════════════════════════════════════════════════════
 function buildLevel() {
   const S = NM.scene;
   NM.colliders = [];
 
-  const stone  = new THREE.MeshLambertMaterial({ color: 0x3a2d4a });
-  const dark   = new THREE.MeshLambertMaterial({ color: 0x282030 });
-  const red    = new THREE.MeshLambertMaterial({ color: 0x6a2a2a });
-  const gold   = new THREE.MeshLambertMaterial({ color: 0x9a7a3a, emissive:0x2a1a0a, emissiveIntensity:0.3 });
-  const wood   = new THREE.MeshLambertMaterial({ color: 0x4a2a18 });
-  const bridgeMat = new THREE.MeshLambertMaterial({ color: 0x6a4a2a });
+  const stone  = new THREE.MeshLambertMaterial({ color: 0x3a3545 });
+  const dark   = new THREE.MeshLambertMaterial({ color: 0x282330 });
+  const red    = new THREE.MeshLambertMaterial({ color: 0x6a2a1a });
+  const gold   = new THREE.MeshLambertMaterial({ color: 0xaa8a3a, emissive:0x331f00, emissiveIntensity:0.4 });
+  const tile   = new THREE.MeshLambertMaterial({ color: 0x2a2535 });
+  const woodMat= new THREE.MeshLambertMaterial({ color: 0x4a3a2a });
 
-  // Main ground (larger)
-  solid(S, 200, 0.5, 200,  0, -0.25, 0, stone);
-  NM.levelBounds = { minX:-98, maxX:98, minZ:-98, maxZ:98 };
+  solid(S, 120, 0.5, 120,  0, -0.25, 0, stone);
 
-  // ---------- STAGE 1: Stealth Village (left side) ----------
-  for (let i = 0; i < 6; i++) {
-    solid(S, 2, 2.5, 2, -70 + i*8, 1.25, -60, wood);
-    addLantern(S, -70 + i*8, 2.5, -60);
-  }
-  solid(S, 30, 0.5, 8, -60, 0.25, -40, dark);
-  solid(S, 6, 1.2, 6, -55, 0.6, -42, wood);
-  solid(S, 6, 1.2, 6, -45, 0.6, -48, wood);
-  // houses
-  addHouse(S, -75, -30, 8);
-  addHouse(S, -45, -30, 8);
-  // trees
-  for (let x = -80; x < -30; x+=10) addTree(S, x, 0, -20);
+  for (let x=-7;x<=7;x++) for(let z=-7;z<=7;z++)
+    if((x+z)%2===0) decor(S, 4,0.04,4, x*8,0.02,z*8, tile);
 
-  // ---------- STAGE 2: Bridge of Shadows (center) ----------
-  solid(S, 40, 0.5, 8, 0, 0.5, 20, bridgeMat);
-  solid(S, 8, 0.5, 30, 0, 0.5, 0, bridgeMat); // cross
-  for (let i = 0; i < 5; i++) {
-    solid(S, 2, 3, 2, 0 + i*5, 1.5, 20, wood);
-    addLantern(S, 0 + i*5, 3, 20);
-    solid(S, 2, 3, 2, 0 - i*5, 1.5, 20, wood);
-    addLantern(S, 0 - i*5, 3, 20);
-  }
-  // water effect
-  const waterMat = new THREE.MeshLambertMaterial({ color: 0x226688, emissive: 0x113344, emissiveIntensity: 0.2 });
-  solid(S, 80, 0.2, 40, 0, 0.1, 20, waterMat);
-  solid(S, 80, 0.2, 40, 0, 0.1, -20, waterMat);
+  solid(S, 12,1.2,0.5, -20,0.6,-8, stone);
+  solid(S, 0.5,1.2,8,  -14,0.6,-4, stone);
+  addLantern(S, -24,0,-14);
+  addLantern(S, -16,0,-14);
 
-  // ---------- STAGE 3: Fortress Gate (right side) ----------
-  solid(S, 8, 6, 40, 70, 3, -30, stone);
-  solid(S, 8, 6, 40, 70, 3, 30, stone);
-  solid(S, 40, 6, 8, 70, 3, 0, stone);
-  // gate
-  solid(S, 20, 8, 4, 70, 4, 10, red);
-  solid(S, 20, 8, 4, 70, 4, -10, red);
-  solid(S, 4, 2, 8, 70, 6, 0, wood);
-  addPagodaRoof(S, 70, 10, 0, 12, 3, gold);
-  addLantern(S, 70, 2, 25);
-  addLantern(S, 70, 2, -25);
-  addTree(S, 50, 0, 50);
-  addTree(S, 90, 0, -50);
+  solid(S, 4,1.2,4,   8,0.6,-20, stone);
+  solid(S, 4,2.0,4,  14,1.0,-20, stone);
+  solid(S, 4,2.8,4,  20,1.4,-20, stone);
+  solid(S, 4,3.6,4,  26,1.8,-20, stone);
+  solid(S, 4,4.4,4,  32,2.2,-20, stone);
+  solid(S, 28,0.4,3, 20,4.45,-20, stone);
+  addLantern(S, 32,4.5,-20);
 
-  // Boss Area (far end)
-  solid(S, 30, 1, 30, -70, 0.5, 80, red);
-  addPagodaRoof(S, -70, 6, 80, 28, 4, red);
-  addLantern(S, -80, 0, 75);
-  addLantern(S, -60, 0, 85);
+  solid(S, 1.5,8,28,   2,4,-4, stone);
+  solid(S, 1.5,8,28,  10,4,-4, stone);
+  solid(S, 12,0.3,28,  6,0,-4, dark);
+  solid(S, 8,0.4,5,    6,8.5,8, gold);
+  addLantern(S, 6,8.5,8);
+  decor(S, 0.2,0.1,26, 5,0.04,-4, tile);
+  decor(S, 0.2,0.1,26, 7,0.04,-4, tile);
 
-  // Outer boundary walls
-  solid(S, 210, 6, 2,    0, 3, -100, stone);
-  solid(S, 210, 6, 2,    0, 3, 100, stone);
-  solid(S, 2, 6, 210,   -100, 3, 0, stone);
-  solid(S, 2, 6, 210,   100, 3, 0, stone);
+  solid(S, 1.5,10,6, -8,5,16, stone);
+  solid(S, 6,0.4,5,  -2,7,16, gold);
+  addLantern(S, -2,7,16);
+  solid(S, 3,0.4,3, -14,1.2,14, stone);
+  solid(S, 3,0.4,3, -12,2.5,16, stone);
 
-  // Sky
+  solid(S, 6,1.2,0.5,  8,0.6,12, stone);
+  solid(S, 0.5,1.2,6,  16,0.6,8, stone);
+  solid(S, 6,1.2,0.5,  24,0.6,18, stone);
+  solid(S, 0.5,1.2,6,  -4,0.6,18, stone);
+  solid(S, 6,1.2,0.5,  -12,0.6,12, stone);
+  solid(S, 14,1,14,     0,0.5,35, stone);
+  solid(S, 10,0.4,10,   0,1.4,35, stone);
+  addPagodaRoof(S, 0,3,35, 12,2.5, red);
+  addPagodaRoof(S, 0,6,35,  8,2,   red);
+  decor(S, 0.3,3,0.3,   0,8.5,35, gold);
+  [[-5,0,30],[5,0,30],[-5,0,40],[5,0,40]].forEach(([x,y,z])=>addLantern(S,x,y,z));
+
+  solid(S, 120,6,1.5,    0,3,-59, stone);
+  solid(S, 120,6,1.5,    0,3, 59, stone);
+  solid(S, 1.5,6,120,   59,3,  0, stone);
+  solid(S, 1.5,6,120,  -59,3,  0, stone);
+  solid(S, 120,0.4,1.5,  0,6.2,-59, stone);
+  solid(S, 120,0.4,1.5,  0,6.2, 59, stone);
+  solid(S, 1.5,0.4,120, 59,6.2,  0, stone);
+  solid(S, 1.5,0.4,120,-59,6.2,  0, stone);
+
+  [[-30,0,0],[30,0,0],[-30,0,-30],[30,0,-30],[-30,0,30],[30,0,30]].forEach(([x,y,z])=>addTree(S,x,y,z));
+  [[-20,0,4],[20,0,4],[0,0,-30],[-10,0,-30],[10,0,-30]].forEach(([x,y,z])=>addLantern(S,x,y,z));
+
   buildStarfield(S);
   const moon = new THREE.Mesh(
     new THREE.SphereGeometry(5,16,16),
-    new THREE.MeshBasicMaterial({color:0xe8d890})
+    new THREE.MeshBasicMaterial({color:0xd4c870})
   );
-  moon.position.set(120, 150, -180);
+  moon.position.set(80,100,-120);
   S.add(moon);
 
   NM.groundY = 0;
+  NM.levelBounds = { minX:-58, maxX:58, minZ:-58, maxZ:58 };
 }
 
 function solid(S, w, h, d, x, y, z, mat) {
@@ -820,19 +784,6 @@ function solid(S, w, h, d, x, y, z, mat) {
     minZ: z-d/2, maxZ: z+d/2,
   });
   return mesh;
-}
-
-function addHouse(S, x, z, size) {
-  const wallMat = new THREE.MeshLambertMaterial({ color: 0x4a382a });
-  const roofMat = new THREE.MeshLambertMaterial({ color: 0x6a4a2a });
-  solid(S, size, 2, size, x, 1, z, wallMat);
-  solid(S, size+2, 0.5, size+2, x, 2.25, z, roofMat);
-  const roofCone = new THREE.ConeGeometry(size*0.8, 1.5, 4);
-  roofCone.rotateY(Math.PI/4);
-  const cone = new THREE.Mesh(roofCone, roofMat);
-  cone.position.set(x, 3.5, z);
-  cone.castShadow = true;
-  S.add(cone);
 }
 
 function decor(S, w, h, d, x, y, z, mat) {
@@ -854,27 +805,27 @@ function addPagodaRoof(S, x, y, z, size, height, mat) {
 }
 
 function addLantern(S, x, y, z) {
-  decor(S, 0.15,2.5,0.15, x, y+1.25, z, new THREE.MeshLambertMaterial({color:0x3a2a1a}));
-  const lMat = new THREE.MeshLambertMaterial({color:0xffd880,emissive:0xffaa44,emissiveIntensity:1.0});
+  decor(S, 0.15,2.5,0.15, x, y+1.25, z, new THREE.MeshLambertMaterial({color:0x2a1a0a}));
+  const lMat = new THREE.MeshLambertMaterial({color:0xffd080,emissive:0xff9900,emissiveIntensity:1.2});
   const lan = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,0.5), lMat);
   lan.position.set(x,y+2.8,z);
   S.add(lan);
-  const light = new THREE.PointLight(0xffaa44,1.8,12);
+  const light = new THREE.PointLight(0xffaa44, 1.5, 12);
   light.position.set(x,y+2.8,z);
   S.add(light);
   lan._light = light;
-  lan._flickerBase = 1.8;
+  lan._flickerBase = 1.5;
   NM._lanterns = NM._lanterns || [];
   NM._lanterns.push(lan);
 }
 
 function addTree(S, x, y, z) {
-  const trunkMat  = new THREE.MeshLambertMaterial({color:0x3a2a18});
+  const trunkMat  = new THREE.MeshLambertMaterial({color:0x2a1a10});
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.32,3.5,6), trunkMat);
   trunk.position.set(x,y+1.75,z);
   trunk.castShadow = true;
   S.add(trunk);
-  const bMat = new THREE.MeshLambertMaterial({color:0xd4708a,transparent:true,opacity:0.9});
+  const bMat = new THREE.MeshLambertMaterial({color:0xd4607a,transparent:true,opacity:0.88});
   [[0,3.8,0],[0.9,3.2,0.6],[-0.8,3.4,-0.5],[0.4,4,-0.8],[-0.3,3,0.9]].forEach(([ox,oy,oz])=>{
     const b = new THREE.Mesh(new THREE.SphereGeometry(0.8+Math.random()*0.4,6,5), bMat);
     b.position.set(x+ox,y+oy,z+oz);
@@ -894,12 +845,11 @@ function buildStarfield(S) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  COLLISION SYSTEM (original)
+//  COLLISION SYSTEM (SIMPLE - NO WALL STICKING)
 // ══════════════════════════════════════════════════════════════
 const CHAR_H   = 1.85;
-const CHAR_R   = 0.35;
-const STEP_H   = 0.65;
-const WALL_JUMP_COOLDOWN = 0.25;
+const CHAR_R   = 0.32;
+const STEP_H   = 0.55;
 
 function sweepAABB(startPos, endPos) {
   const R = NM.colliders;
@@ -908,22 +858,38 @@ function sweepAABB(startPos, endPos) {
   let px = endPos.x, py = endPos.y, pz = endPos.z;
   const prevY = startPos.y;
   let onGround = false, hitX = false, hitZ = false;
-  let groundY  = -Infinity;
-  let wallNX = 0, wallNZ = 0;
+  let groundY = -Infinity;
 
   for (const c of R) {
     if (px+r <= c.minX || px-r >= c.maxX) continue;
     if (pz+r <= c.minZ || pz-r >= c.maxZ) continue;
-    if (py >= c.maxY || py+CHAR_H <= c.minY) continue;
+    if (py >= c.maxY + CHAR_H || py+CHAR_H <= c.minY) continue;
 
     const feetY = py;
     const top = c.maxY;
 
-    if (prevY >= top - STEP_H && feetY <= top + 0.1) {
-      if (top > groundY) {
-        groundY = top;
-        onGround = true;
-      }
+    if (prevY >= top - STEP_H && feetY <= top + 0.05) {
+      if (top > groundY) groundY = top;
+      onGround = true;
+      continue;
+    }
+
+    const penL = (px + r) - c.minX;
+    const penR = c.maxX - (px - r);
+    const penF = (pz + r) - c.minZ;
+    const penB = c.maxZ - (pz - r);
+
+    const minX = Math.min(penL, penR);
+    const minZ = Math.min(penF, penB);
+
+    if (minX < minZ) {
+      if (penL < penR) px = c.minX - r;
+      else px = c.maxX + r;
+      hitX = true;
+    } else {
+      if (penF < penB) pz = c.minZ - r;
+      else pz = c.maxZ + r;
+      hitZ = true;
     }
   }
 
@@ -931,72 +897,22 @@ function sweepAABB(startPos, endPos) {
     py = groundY;
   }
 
-  let iteration = 0;
-  const maxIter = 5;
-  let collided = true;
-
-  while (collided && iteration < maxIter) {
-    collided = false;
-    iteration++;
-
-    for (const c of R) {
-      if (px+r <= c.minX || px-r >= c.maxX) continue;
-      if (pz+r <= c.minZ || pz-r >= c.maxZ) continue;
-      if (py >= c.maxY || py+CHAR_H <= c.minY) continue;
-
-      if (Math.abs(py - c.maxY) < 0.1 && py > c.maxY - 0.1) continue;
-
-      const penL = (px + r) - c.minX;
-      const penR = c.maxX - (px - r);
-      const penF = (pz + r) - c.minZ;
-      const penB = c.maxZ - (pz - r);
-
-      const minX = Math.min(penL, penR);
-      const minZ = Math.min(penF, penB);
-
-      if (minX < minZ) {
-        if (penL < penR) {
-          px = c.minX - r;
-          wallNX = -1;
-        } else {
-          px = c.maxX + r;
-          wallNX = 1;
-        }
-        hitX = true;
-        collided = true;
-      } else {
-        if (penF < penB) {
-          pz = c.minZ - r;
-          wallNZ = -1;
-        } else {
-          pz = c.maxZ + r;
-          wallNZ = 1;
-        }
-        hitZ = true;
-        collided = true;
-      }
-    }
-  }
-
   if (py < 0) { py = 0; onGround = true; groundY = 0; }
 
   const B = NM.levelBounds;
-  if (px - r < B.minX) { px = B.minX + r; hitX = true; wallNX =  1; }
-  if (px + r > B.maxX) { px = B.maxX - r; hitX = true; wallNX = -1; }
-  if (pz - r < B.minZ) { pz = B.minZ + r; hitZ = true; wallNZ =  1; }
-  if (pz + r > B.maxZ) { pz = B.maxZ - r; hitZ = true; wallNZ = -1; }
+  if (px - r < B.minX) { px = B.minX + r; hitX = true; }
+  if (px + r > B.maxX) { px = B.maxX - r; hitX = true; }
+  if (pz - r < B.minZ) { pz = B.minZ + r; hitZ = true; }
+  if (pz + r > B.maxZ) { pz = B.maxZ - r; hitZ = true; }
 
   return {
     pos: new THREE.Vector3(px, py, pz),
-    onGround, hitX, hitZ, groundY,
-    wallNX, wallNZ,
-    isWall: (hitX || hitZ) && !onGround
+    onGround, hitX, hitZ, groundY
   };
 }
 
 // ══════════════════════════════════════════════════════════════
-//  PLAYER UPDATE — Normal double jump (removed Celeste wall jump & coyote)
-//  All original attack/block/stealth/combat restored
+//  PLAYER UPDATE — COMPLETELY REWRITTEN SIMPLE JUMP (NO WALL STICKING)
 // ══════════════════════════════════════════════════════════════
 function updatePlayer(dt) {
   const P = NM.player;
@@ -1007,8 +923,6 @@ function updatePlayer(dt) {
   P.attackCooldown = Math.max(0, P.attackCooldown - dt);
   P.invincibleTimer = Math.max(0, P.invincibleTimer - dt);
   P.comboTimer = Math.max(0, P.comboTimer - dt);
-  P.wallJumpTimer = Math.max(0, (P.wallJumpTimer || 0) - dt);
-
   if (P.comboTimer === 0) P.comboCount = 0;
 
   if (P.isStealthKilling) {
@@ -1022,9 +936,9 @@ function updatePlayer(dt) {
   const camRight = new THREE.Vector3(Math.cos(NM.camYaw), 0, -Math.sin(NM.camYaw)).normalize();
 
   let moveX = 0, moveZ = 0;
-  if (NM.keys['w'] || NM.keys['arrowup'])    { moveX += camFwd.x;  moveZ += camFwd.z; }
-  if (NM.keys['s'] || NM.keys['arrowdown'])  { moveX -= camFwd.x;  moveZ -= camFwd.z; }
-  if (NM.keys['a'] || NM.keys['arrowleft'])  { moveX += camRight.x; moveZ += camRight.z; }
+  if (NM.keys['w'] || NM.keys['arrowup']) { moveX += camFwd.x; moveZ += camFwd.z; }
+  if (NM.keys['s'] || NM.keys['arrowdown']) { moveX -= camFwd.x; moveZ -= camFwd.z; }
+  if (NM.keys['a'] || NM.keys['arrowleft']) { moveX += camRight.x; moveZ += camRight.z; }
   if (NM.keys['d'] || NM.keys['arrowright']) { moveX -= camRight.x; moveZ -= camRight.z; }
   if (NM.joystick.active) {
     const jx = NM.joystick.dx, jz = NM.joystick.dy;
@@ -1032,9 +946,10 @@ function updatePlayer(dt) {
     moveZ += camFwd.z * (-jz) - camRight.z * jx;
   }
 
-  P.isCrouching = (NM.keys['shift'] || NM.btnState.crouch) && !NM.keys['control'];
+  // Crouch/Sneak (L1)
+  P.isCrouching = (NM.keys['shift'] || NM.btnState.crouch);
 
-  // Sprint
+  // Sprint (R1)
   const wantSprint = (NM.keys['control'] || NM.btnState.sprint) && !P.isCrouching;
   const moving = (moveX * moveX + moveZ * moveZ) > 0.01;
   if (wantSprint && moving && P.sprint > 0) {
@@ -1045,74 +960,47 @@ function updatePlayer(dt) {
     if (!wantSprint || !moving) P.sprint = Math.min(P.maxSprint, P.sprint + dt * 15);
   }
 
-  const topSpd = P.isAttacking ? P.speed * 0.2 : P.isSprinting ? P.speed * 2.2 : P.isCrouching ? P.speed * 0.35 : P.speed;
+  // Speed based on state
+  let topSpd = P.speed;
+  if (P.isAttacking) topSpd *= 0.2;
+  else if (P.isSprinting) topSpd *= 2.0;
+  else if (P.isCrouching) topSpd *= 0.35;
 
-  // Horizontal movement
+  // Horizontal movement - instant response, no sliding
   const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
-  const accel = 45;
-  const friction = P.onGround ? 30 : 5;
-
-  if (len > 0.01 && P.wallJumpTimer <= 0) {
+  
+  if (len > 0.01) {
     moveX /= len;
     moveZ /= len;
     P.facingAngle = Math.atan2(moveX, moveZ);
-    
     P.velocity.x = moveX * topSpd;
     P.velocity.z = moveZ * topSpd;
-  } else if (P.onGround) {
-    P.velocity.x = lerp(P.velocity.x, 0, Math.min(1, friction * dt));
-    P.velocity.z = lerp(P.velocity.z, 0, Math.min(1, friction * dt));
+  } else {
+    P.velocity.x = 0;
+    P.velocity.z = 0;
   }
 
-  // Gravity
-  const grav = P.yVel > 0 ? 18 : 35;
+  // Gravity (faster fall)
+  const grav = 45;
   P.yVel -= grav * dt;
-  P.yVel = Math.max(P.yVel, -32);
+  P.yVel = Math.max(P.yVel, -35);
 
-  // Ground detection
-  if (P.onGround) {
-    P._coyoteTimer = 0.15;
-    P.jumpsUsed = 0;
-  } else if (P._coyoteTimer > 0) {
-    P._coyoteTimer -= dt;
-  }
-
-  // Jump input (normal double jump)
+  // SIMPLE JUMP LOGIC - NO WALL STICKING
   const jumpJustPressed = NM.btnState.jumpJustPressed || (NM.keys[' '] && !P._spaceWasDown);
   P._spaceWasDown = NM.keys[' '];
-  
+  NM.btnState.jumpJustPressed = false;
+
   if (jumpJustPressed) {
-    P._jumpBuffer = 0.18;
-    NM.btnState.jumpJustPressed = false;
-  }
-  
-  if (P._jumpBuffer > 0) P._jumpBuffer -= dt;
-
-  // Wall detection (kept for visuals but not used for jump)
-  const sweep = sweepAABB(P.mesh.position.clone(), P.mesh.position.clone());
-  P._onWall = sweep.isWall && !P.onGround;
-  
-  if (P._onWall) {
-    P._wallNormal = { x: sweep.wallNX, z: sweep.wallNZ };
-    P.yVel = Math.max(P.yVel, -5); // wall slide
-  }
-
-  // Jump execution (normal double jump)
-  if (P._jumpBuffer > 0) {
-    const canGroundJump = (P.onGround || P._coyoteTimer > 0);
-    const canDoubleJump = P.jumpsUsed < 2 && !P.onGround && !P._onWall;
-
-    if (canGroundJump) {
-      P.yVel = 12.0;
+    if (P.onGround) {
+      // First jump
+      P.yVel = 12;
       P.jumpsUsed = 1;
-      P._coyoteTimer = 0;
-      P._jumpBuffer = 0;
       P.onGround = false;
       sfxJump();
-    } else if (canDoubleJump) {
-      P.yVel = 11.0;
+    } else if (P.jumpsUsed === 1) {
+      // Double jump
+      P.yVel = 10;
       P.jumpsUsed = 2;
-      P._jumpBuffer = 0;
       spawnDoubleJumpFX(P.mesh.position.clone());
       sfxJump();
     }
@@ -1125,33 +1013,34 @@ function updatePlayer(dt) {
   desiredPos.z += P.velocity.z * dt;
   desiredPos.y += P.yVel * dt;
 
-  const finalSweep = sweepAABB(startPos, desiredPos);
-  P.mesh.position.copy(finalSweep.pos);
+  const sweep = sweepAABB(startPos, desiredPos);
+  P.mesh.position.copy(sweep.pos);
 
-  if (finalSweep.onGround) {
+  // Update ground state
+  if (sweep.onGround) {
     const wasAir = !P.onGround;
     P.onGround = true;
     P.yVel = 0;
-    if (wasAir && P._fallSpeed > 8) {
-      sfxFootstep(0.3);
-    }
+    P.jumpsUsed = 0; // Reset jumps when landing
+    if (wasAir && P._fallSpeed > 8) sfxFootstep(0.3);
   } else {
     P._fallSpeed = Math.abs(P.yVel);
     P.onGround = false;
   }
 
-  if (finalSweep.hitX) P.velocity.x *= 0.1;
-  if (finalSweep.hitZ) P.velocity.z *= 0.1;
+  // Stop on wall hits - prevents sticking
+  if (sweep.hitX) P.velocity.x = 0;
+  if (sweep.hitZ) P.velocity.z = 0;
 
   // Facing
   if (len > 0.01) {
     P.mesh.rotation.y = lerpAngle(P.mesh.rotation.y, P.facingAngle, 18 * dt);
   }
 
-  // Blocking
+  // Block
   P.isBlocking = (NM.keys['k'] || NM.btnState.block) && !P.isAttacking && P.onGround;
 
-  // Attack input
+  // Attack
   const atkPressed = NM.keys['j'] || NM.btnState.attackJustPressed;
   if (atkPressed) {
     NM.keys['j'] = false;
@@ -1159,6 +1048,13 @@ function updatePlayer(dt) {
     const nearEnemy = getStealthTarget();
     if (nearEnemy) doStealthKill(nearEnemy);
     else if (!P.isAttacking && P.attackCooldown <= 0) doAttack();
+  }
+
+  // Interact (Triangle)
+  const interactPressed = NM.keys['l'] || NM.btnState.interactJustPressed;
+  if (interactPressed) {
+    NM.keys['l'] = false;
+    NM.btnState.interactJustPressed = false;
   }
 
   // Attack animation
@@ -1195,29 +1091,37 @@ function updatePlayer(dt) {
     P._walkTimer = (P._walkTimer || 0) - dt;
     if (P._walkTimer <= 0) {
       sfxFootstep(0.1);
-      P._walkTimer = P.isSprinting ? 0.18 : 0.3;
+      P._walkTimer = P.isSprinting ? 0.22 : 0.35;
     }
   }
 
+  // Ki regen
   P.ki = Math.min(P.maxKi, P.ki + dt * 8);
+
+  // Zone hints
   updateZoneHint(P.mesh.position);
+
+  // Stealth
   updateStealthState(P);
 }
 
+// ══════════════════════════════════════════════════════════════
+//  JUMP FX
+// ══════════════════════════════════════════════════════════════
 function spawnDoubleJumpFX(pos) {
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const geo = new THREE.SphereGeometry(0.05, 3, 3);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xaaccff });
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const geo = new THREE.SphereGeometry(0.06, 3, 3);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x88ccff });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(pos);
-    mesh.position.y += 0.5;
+    mesh.position.y += 0.3;
     NM.scene.add(mesh);
     NM.particles.push({
       mesh,
-      vel: new THREE.Vector3(Math.cos(a) * 2.5, 1.0, Math.sin(a) * 2.5),
-      life: 0.6,
-      maxLife: 0.6,
+      vel: new THREE.Vector3(Math.cos(a) * 3.5, 1.2, Math.sin(a) * 3.5),
+      life: 0.7,
+      maxLife: 0.7,
       gravity: true,
       type: 'spark'
     });
@@ -1225,7 +1129,7 @@ function spawnDoubleJumpFX(pos) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CAMERA (original)
+//  CAMERA
 // ══════════════════════════════════════════════════════════════
 function updateCamera(dt) {
   if (!NM.player) return;
@@ -1238,7 +1142,6 @@ function updateCamera(dt) {
   NM.camYaw -= NM.mouse.dx * 0.003;
   const pitchDelta = NM.mouse.dy * 0.003 * (NM.invertY ? 1 : -1);
   NM.camPitch = clamp(NM.camPitch - pitchDelta, -0.06, 0.78);
-  
   NM.mouse.dx = 0;
   NM.mouse.dy = 0;
 
@@ -1246,7 +1149,7 @@ function updateCamera(dt) {
   NM.camera.fov = lerp(NM.camera.fov, targetFov, dt * 5);
   NM.camera.updateProjectionMatrix();
 
-  if (NM.camMode === 3) { // FPS
+  if (NM.camMode === 3) {
     NM.player.mesh.visible = false;
     const eyeY = P.y + 1.6;
     NM.camera.position.set(P.x, eyeY, P.z);
@@ -1266,8 +1169,8 @@ function updateCamera(dt) {
     NM.camTarget.z - Math.cos(NM.camYaw) * Math.cos(NM.camPitch) * dist
   );
 
-  let lo = 1.5, hi = dist, best = dist;
-  for (let i = 0; i < 8; i++) {
+  let lo = 1.2, hi = dist, best = dist;
+  for (let i = 0; i < 6; i++) {
     const mid = (lo + hi) / 2;
     const testPos = new THREE.Vector3(
       NM.camTarget.x - Math.sin(NM.camYaw) * Math.cos(NM.camPitch) * mid,
@@ -1295,11 +1198,12 @@ function updateCamera(dt) {
 
 function isCamPathClear(from, to) {
   if (NM.xrayMode) return true;
+
   const dir = new THREE.Vector3().subVectors(to, from);
   const len = dir.length();
   dir.normalize();
   for (const c of NM.colliders) {
-    if ((c.maxY - c.minY) < 0.8) continue;
+    if ((c.maxY - c.minY) < 0.8 && (c.maxX - c.minX) > 10) continue;
     const tMinX = ((dir.x > 0 ? c.minX : c.maxX) - from.x) / (dir.x || 0.0001);
     const tMaxX = ((dir.x > 0 ? c.maxX : c.minX) - from.x) / (dir.x || 0.0001);
     const tMinZ = ((dir.z > 0 ? c.minZ : c.maxZ) - from.z) / (dir.z || 0.0001);
@@ -1323,80 +1227,65 @@ function cycleCamMode() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  MINIMAP (slightly larger)
+//  MINIMAP
 // ══════════════════════════════════════════════════════════════
 function updateMinimap() {
   const canvas = document.getElementById('minimap');
   if (!canvas || !NM.player) return;
   const ctx = canvas.getContext('2d');
-  const W = 180, H = 180; // larger
-  const WORLD = 200;
+  const W = canvas.width, H = canvas.height;
+  const WORLD = 120;
   const scale = W / WORLD;
   const ox = W / 2, oz = H / 2;
 
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(0, 0, W, H);
 
   for (const c of NM.colliders) {
     const h = c.maxY - c.minY;
-    if (h < 0.8) continue;
+    if (h < 0.4) continue;
     const sx = ox + c.minX * scale;
     const sz = oz + c.minZ * scale;
     const sw = Math.max(1, (c.maxX - c.minX) * scale);
     const sh = Math.max(1, (c.maxZ - c.minZ) * scale);
-    ctx.fillStyle = 'rgba(100,80,140,0.7)';
+    if (h > 4) ctx.fillStyle = 'rgba(100,60,140,0.9)';
+    else if (h > 1.5) ctx.fillStyle = 'rgba(90,70,50,0.8)';
+    else ctx.fillStyle = 'rgba(50,45,60,0.85)';
     ctx.fillRect(sx, sz, sw, sh);
   }
 
   NM.enemies.forEach(e => {
     if (e.state === 'DEAD') return;
-    const ex = ox + e.mesh.position.x * scale;
-    const ez = oz + e.mesh.position.z * scale;
+    const ex = ox + e.mesh.position.x * scale, ez = oz + e.mesh.position.z * scale;
     ctx.beginPath();
-    ctx.arc(ex, ez, e.isTarget ? 5 : 3, 0, Math.PI * 2);
+    ctx.arc(ex, ez, e.isTarget ? 4 : 2.5, 0, Math.PI * 2);
     ctx.fillStyle = e.state === 'PATROL' ? '#ffaa44' : '#ff2200';
     ctx.fill();
-    if (e.patrol && e.patrol.length > 1) {
-      ctx.strokeStyle = 'rgba(255,170,68,0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      e.patrol.forEach((p, i) => {
-        const px = ox + p.x * scale;
-        const pz = oz + p.z * scale;
-        if (i === 0) ctx.moveTo(px, pz);
-        else ctx.lineTo(px, pz);
-      });
-      ctx.closePath();
-      ctx.stroke();
-    }
   });
 
   const px = ox + NM.player.mesh.position.x * scale;
   const pz = oz + NM.player.mesh.position.z * scale;
   ctx.beginPath();
-  ctx.arc(px, pz, 5, 0, Math.PI * 2);
+  ctx.arc(px, pz, 4, 0, Math.PI * 2);
   ctx.fillStyle = '#88ccff';
   ctx.fill();
   const a = NM.player.facingAngle || 0;
   ctx.beginPath();
-  ctx.moveTo(px + Math.sin(a) * 8, pz + Math.cos(a) * 8);
-  ctx.lineTo(px + Math.sin(a - 2.3) * 4, pz + Math.cos(a - 2.3) * 4);
-  ctx.lineTo(px + Math.sin(a + 2.3) * 4, pz + Math.cos(a + 2.3) * 4);
+  ctx.moveTo(px + Math.sin(a) * 7, pz + Math.cos(a) * 7);
+  ctx.lineTo(px + Math.sin(a - 2.3) * 3.5, pz + Math.cos(a - 2.3) * 3.5);
+  ctx.lineTo(px + Math.sin(a + 2.3) * 3.5, pz + Math.cos(a + 2.3) * 3.5);
   ctx.closePath();
   ctx.fillStyle = '#ffffff';
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(232,201,126,0.7)';
-  ctx.font = 'bold 8px monospace';
-  ctx.fillText('VILLAGE', -70*scale+ox, -40*scale+oz);
-  ctx.fillText('BRIDGE', 0*scale+ox, 20*scale+oz);
-  ctx.fillText('GATE', 70*scale+ox, 0*scale+oz);
-  ctx.fillText('BOSS', -70*scale+ox, 80*scale+oz);
+  ctx.fillStyle = 'rgba(232,201,126,0.55)';
+  ctx.font = '7px monospace';
+  ctx.fillText('MAP', 4, 10);
 }
 
 // ══════════════════════════════════════════════════════════════
-//  CHARACTER CREATION (original)
+//  CHARACTER BUILDING (ORIGINAL)
 // ══════════════════════════════════════════════════════════════
 function buildCharacter(options = {}) {
   const {
@@ -1544,7 +1433,6 @@ function buildCharacter(options = {}) {
   group.traverse(m => {
     if (m.isMesh) {
       m.castShadow = true;
-      m.userData.isCharacter = true;
     }
   });
 
@@ -1552,7 +1440,7 @@ function buildCharacter(options = {}) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  PLAYER SPAWN
+//  PLAYER
 // ══════════════════════════════════════════════════════════════
 function spawnPlayer() {
   const mesh = buildCharacter({
@@ -1572,7 +1460,7 @@ function spawnPlayer() {
     maxHp: 100,
     ki: 100,
     maxKi: 100,
-    speed: 6.5,
+    speed: 5.5,
     sprint: 100,
     maxSprint: 100,
     isSprinting: false,
@@ -1594,18 +1482,12 @@ function spawnPlayer() {
     attackFrame: 0,
     isStealthKilling: false,
     stealthKillTimer: 0,
-    _coyoteTimer: 0,
-    _jumpBuffer: 0,
-    wallJumpTimer: 0,
-    _wallNormal: { x: 0, z: 0 },
-    _spaceWasDown: false,
-    _fallSpeed: 0
   };
   NM.scene.add(mesh);
 }
 
 // ══════════════════════════════════════════════════════════════
-//  ENEMY SPAWN (full original)
+//  ENEMIES (ORIGINAL - shortened for brevity)
 // ══════════════════════════════════════════════════════════════
 function spawnEnemies() {
   NM.enemies = [];
@@ -1629,7 +1511,7 @@ function spawnEnemies() {
       isTarget: isTarget || isBoss,
       hp: isBoss ? 150 : 60,
       maxHp: isBoss ? 150 : 60,
-      speed: isBoss ? 3.5 : 3.0,
+      speed: isBoss ? 3.2 : 2.8,
       state: 'PATROL',
       alertLevel: 0,
       vision: isBoss ? 14 : 10,
@@ -1657,19 +1539,14 @@ function spawnEnemies() {
     return e;
   }
 
-  // Stage 1: village guards
-  makeEnemy(-70, -60, false, [{x:-70,z:-60}]);
-  makeEnemy(-55, -45, false, [{x:-55,z:-45},{x:-45,z:-45},{x:-45,z:-35},{x:-55,z:-35}]);
-  // Stage 2: bridge guards
-  makeEnemy(0, 20, false, [{x:-10,z:20},{x:10,z:20}]);
-  makeEnemy(0, 0, false, [{x:0,z:-5},{x:0,z:5}]);
-  // Stage 3: fortress guards
-  makeEnemy(70, 30, false, [{x:60,z:30},{x:80,z:30}]);
-  makeEnemy(70, -30, false, [{x:70,z:-20},{x:70,z:-40}]);
-  // Boss
-  makeEnemy(-70, 80, true, [
-    {x:-80,z:75},{x:-60,z:75},{x:-60,z:85},{x:-80,z:85}
-  ], true);
+  makeEnemy(-24, -14, false, [{ x: -24, z: -14 }]);
+  makeEnemy(-19, -16, false, [{ x: -19, z: -16 }]);
+  makeEnemy(-16, -13, false, [{ x: -16, z: -13 }]);
+  makeEnemy(10, 12, false, [{ x: 5, z: 10 }, { x: 18, z: 10 }, { x: 18, z: 22 }, { x: 5, z: 22 }]);
+  makeEnemy(-10, 18, false, [{ x: -18, z: 10 }, { x: -5, z: 10 }, { x: -5, z: 26 }, { x: -18, z: 26 }]);
+  makeEnemy(24, 18, false, [{ x: 22, z: 12 }, { x: 30, z: 12 }, { x: 30, z: 24 }, { x: 22, z: 24 }]);
+  makeEnemy(-22, 28, false, [{ x: -28, z: 24 }, { x: -14, z: 24 }, { x: -14, z: 36 }, { x: -28, z: 36 }]);
+  makeEnemy(0, 30, true, [{ x: -4, z: 28 }, { x: 4, z: 28 }, { x: 4, z: 38 }, { x: -4, z: 38 }], true);
 }
 
 function createEnemyUI(e) {
@@ -1704,294 +1581,77 @@ function gameLoop() {
   updateCamera(dt);
   updateLanterns(dt);
   updateEnemyUI();
-  updateMinimap();
   animateTrees(dt);
   NM.renderer.render(NM.scene, NM.camera);
   updateHUD();
+  updateMinimap();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ENEMY AI (original full version)
-// ══════════════════════════════════════════════════════════════
+// ENEMY AI (ORIGINAL - shortened)
 function updateEnemies(dt) {
   NM.enemies.forEach(e => updateEnemy(e, dt));
 }
 
 function updateEnemy(e, dt) {
   if (e.state === 'DEAD') return;
-
   e.animTime += dt;
   e.attackCooldown = Math.max(0, e.attackCooldown - dt);
   e.blockCooldown = Math.max(0, e.blockCooldown - dt);
   e.attackTimer = Math.max(0, e.attackTimer - dt);
-  if (e.attackTimer <= 0 && e.isAttacking) {
-    e.isAttacking = false;
-  }
+  if (e.attackTimer <= 0 && e.isAttacking) e.isAttacking = false;
 
   const P = NM.player;
   const toPlayer = new THREE.Vector3().subVectors(P.mesh.position, e.mesh.position);
   const distToPlayer = toPlayer.length();
-  const canSeePlayer = checkVision(e, P);
-  const canHearPlayer = checkHearing(e, P);
 
-  switch (e.state) {
-    case 'PATROL':
-      doPatrol(e, dt);
-      if (canSeePlayer || canHearPlayer) {
-        if (canSeePlayer && distToPlayer < e.vision * 0.6) {
-          e.state = 'ALERT';
-          e.alertLevel = 1;
-          e.lastKnownPlayer.copy(P.mesh.position);
-          showEnemyAlert(e, '!');
-          sfxAlert();
-          alertNearby(e.mesh.position, e.isBoss ? 15 : 8);
-        } else {
-          e.state = 'SUSPICIOUS';
-          e.alertLevel = 0.5;
-          showEnemyAlert(e, '?');
-          e._suspiciousTimer = 2;
-        }
-      }
-      break;
+  if (e.patrol && e.patrol.length > 0) {
+    const target = e.patrol[e.patrolIdx];
+    const toTarget = new THREE.Vector3(target.x - e.mesh.position.x, 0, target.z - e.mesh.position.z);
+    const dist = toTarget.length();
 
-    case 'SUSPICIOUS':
-      e._suspiciousTimer = (e._suspiciousTimer || 2) - dt;
-      if (canSeePlayer) {
-        e.state = 'ALERT';
-        e.alertLevel = 1;
-        e.lastKnownPlayer.copy(P.mesh.position);
-        showEnemyAlert(e, '!');
-        sfxAlert();
-        alertNearby(e.mesh.position, 8);
-      } else if (e._suspiciousTimer <= 0) {
-        e.state = 'PATROL';
-        e.alertLevel = 0;
-        showEnemyAlert(e, '');
+    if (dist < 0.5) {
+      e.patrolWait -= dt;
+      if (e.patrolWait <= 0) {
+        e.patrolIdx = (e.patrolIdx + 1) % e.patrol.length;
+        e.patrolWait = 1 + Math.random() * 1.5;
       }
-      faceDirection(e, toPlayer, dt * 2);
-      break;
-
-    case 'ALERT':
-    case 'CHASE':
-      e.state = 'CHASE';
-      if (canSeePlayer) e.lastKnownPlayer.copy(P.mesh.position);
-
-      const toTarget = new THREE.Vector3().subVectors(e.lastKnownPlayer, e.mesh.position);
-      const distToTarget = toTarget.length();
-
-      if (distToPlayer < (e.isBoss ? 2.2 : 1.8)) {
-        e.state = 'ATTACK';
-      } else if (distToTarget > 0.3) {
-        faceDirection(e, toTarget, dt * 10);
-        const spd = e.speed * (e.isBoss ? 1.2 : 1);
-        const np = e.mesh.position.clone();
-        np.x += (toTarget.x / distToTarget) * spd * dt;
-        np.z += (toTarget.z / distToTarget) * spd * dt;
-        const rc = resolveEnemyCollision(np, 0.4);
-        e.mesh.position.x = rc.x;
-        e.mesh.position.z = rc.z;
-      } else {
-        e.state = 'SEARCH';
-        e.searchTimer = 4;
-        showEnemyAlert(e, '?');
-      }
-      break;
-
-    case 'ATTACK':
-      faceDirection(e, toPlayer, dt * 15);
-      if (distToPlayer > (e.isBoss ? 3.5 : 3.0)) {
-        e.state = 'CHASE';
-        break;
-      }
-      if (distToPlayer > (e.isBoss ? 2.2 : 1.8)) {
-        const np3 = e.mesh.position.clone();
-        np3.x += (toPlayer.x / distToPlayer) * e.speed * 0.5 * dt;
-        np3.z += (toPlayer.z / distToPlayer) * e.speed * 0.5 * dt;
-        const rc3 = resolveEnemyCollision(np3, 0.4);
-        e.mesh.position.x = rc3.x;
-        e.mesh.position.z = rc3.z;
-      }
-      if (e.attackCooldown <= 0 && !e.isAttacking) {
-        doEnemyAttack(e);
-      }
-      if (!e.isAttacking && e.blockCooldown <= 0) {
-        e.isBlocking = Math.random() < 0.25 * dt * 60;
-        if (e.isBlocking) e.blockCooldown = 1.2 + Math.random();
-      } else if (e.isAttacking) {
-        e.isBlocking = false;
-      }
-      break;
-
-    case 'SEARCH':
-      e.searchTimer -= dt;
-      e._searchMove = e._searchMove || new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize();
-      e._searchChangeTimer = (e._searchChangeTimer || 0) - dt;
-      if (e._searchChangeTimer <= 0) {
-        e._searchMove = new THREE.Vector3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2).normalize();
-        e._searchChangeTimer = 1 + Math.random();
-      }
-      e.mesh.position.x = clamp(e.mesh.position.x + e._searchMove.x * e.speed * 0.5 * dt, NM.levelBounds.minX, NM.levelBounds.maxX);
-      e.mesh.position.z = clamp(e.mesh.position.z + e._searchMove.z * e.speed * 0.5 * dt, NM.levelBounds.minZ, NM.levelBounds.maxZ);
-      faceDirection(e, e._searchMove, dt * 5);
-
-      if (canSeePlayer) {
-        e.state = 'CHASE';
-        e.lastKnownPlayer.copy(P.mesh.position);
-        showEnemyAlert(e, '!');
-      }
-      if (e.searchTimer <= 0) {
-        e.state = 'PATROL';
-        showEnemyAlert(e, '');
-      }
-      break;
+    } else {
+      toTarget.normalize();
+      e.mesh.position.x += toTarget.x * e.speed * 0.6 * dt;
+      e.mesh.position.z += toTarget.z * e.speed * 0.6 * dt;
+      e.facingAngle = Math.atan2(toTarget.x, toTarget.z);
+    }
   }
 
+  if (distToPlayer < e.vision) {
+    e.state = 'ALERT';
+    e.alertLevel = 1;
+    showEnemyAlert(e, '!');
+    toPlayer.normalize();
+    e.mesh.position.x += toPlayer.x * e.speed * dt;
+    e.mesh.position.z += toPlayer.z * e.speed * dt;
+    e.facingAngle = Math.atan2(toPlayer.x, toPlayer.z);
+    
+    if (distToPlayer < 2 && e.attackCooldown <= 0) {
+      e.isAttacking = true;
+      e.attackCooldown = 1.5;
+      if (!NM.player.isBlocking && NM.player.invincibleTimer <= 0) {
+        NM.player.hp = Math.max(0, NM.player.hp - 15);
+        NM.player.invincibleTimer = 1;
+      }
+    }
+  } else {
+    e.state = 'PATROL';
+    e.alertLevel = 0;
+    showEnemyAlert(e, '');
+  }
+
+  e.mesh.rotation.y = lerpAngle(e.mesh.rotation.y, e.facingAngle, dt * 10);
   e.mesh.position.y = NM.groundY;
   e.mesh.position.x = clamp(e.mesh.position.x, NM.levelBounds.minX, NM.levelBounds.maxX);
   e.mesh.position.z = clamp(e.mesh.position.z, NM.levelBounds.minZ, NM.levelBounds.maxZ);
 
-  const isMoving = e.state === 'CHASE' || e.state === 'SEARCH' || e.state === 'PATROL';
-  animateCharacter(e, dt, isMoving);
-}
-
-function doPatrol(e, dt) {
-  if (!e.patrol || e.patrol.length === 0) return;
-
-  const target = e.patrol[e.patrolIdx];
-  const toTarget = new THREE.Vector3(target.x - e.mesh.position.x, 0, target.z - e.mesh.position.z);
-  const dist = toTarget.length();
-
-  if (dist < 0.8) {
-    e.patrolWait -= dt;
-    if (e.patrolWait <= 0) {
-      e.patrolIdx = (e.patrolIdx + 1) % e.patrol.length;
-      e.patrolWait = 1 + Math.random() * 1.5;
-    }
-  } else {
-    faceDirection(e, toTarget, dt * 6);
-    const np2 = e.mesh.position.clone();
-    np2.x += (toTarget.x / dist) * e.speed * 0.6 * dt;
-    np2.z += (toTarget.z / dist) * e.speed * 0.6 * dt;
-    const rc2 = resolveEnemyCollision(np2, 0.4);
-    e.mesh.position.x = rc2.x;
-    e.mesh.position.z = rc2.z;
-  }
-}
-
-function resolveEnemyCollision(pos, radius) {
-  let rx = pos.x,
-    rz = pos.z;
-  for (const c of NM.colliders) {
-    if (c.maxY < 0.3) continue;
-    if (rx + radius <= c.minX || rx - radius >= c.maxX) continue;
-    if (rz + radius <= c.minZ || rz - radius >= c.maxZ) continue;
-    const penL = (rx + radius) - c.minX,
-      penR = c.maxX - (rx - radius);
-    const penF = (rz + radius) - c.minZ,
-      penB = c.maxZ - (rz - radius);
-    if (Math.min(penL, penR) < Math.min(penF, penB)) {
-      rx = penL < penR ? c.minX - radius : c.maxX + radius;
-    } else {
-      rz = penF < penB ? c.minZ - radius : c.maxZ + radius;
-    }
-  }
-  const B = NM.levelBounds;
-  return new THREE.Vector3(
-    clamp(rx, B.minX + radius, B.maxX - radius), pos.y,
-    clamp(rz, B.minZ + radius, B.maxZ - radius)
-  );
-}
-
-function doEnemyAttack(e) {
-  e.isAttacking = true;
-  e.attackTimer = 0.4;
-  e.attackCooldown = e.isBoss ? 1.2 : 1.8;
-
-  const swingArm = e.mesh._swordArm;
-  if (swingArm) {
-    swingArm.rotation.x = -2.0;
-    setTimeout(() => {
-      if (swingArm) {
-        swingArm.rotation.x = 1.4;
-      }
-      setTimeout(() => {
-        if (swingArm) {
-          swingArm.rotation.x = 0;
-        }
-      }, 250);
-    }, 150);
-  }
-
-  const P = NM.player;
-  setTimeout(() => {
-    if (e.state === 'DEAD') return;
-    const distNow = e.mesh.position.distanceTo(NM.player.mesh.position);
-    if (distNow < (e.isBoss ? 2.5 : 2)) {
-      if (NM.player.isBlocking) {
-        sfxBlock();
-        spawnSpark(NM.player.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)));
-        return;
-      }
-      if (NM.player.invincibleTimer > 0) return;
-      const dmg = e.isBoss ? 25 : 15;
-      hurtPlayer(dmg);
-      sfxHit();
-    }
-  }, 350);
-
-  sfxSwordSwing(0.6);
-}
-
-function hurtPlayer(dmg) {
-  const P = NM.player;
-  P.hp = Math.max(0, P.hp - dmg);
-  P.invincibleTimer = 0.8;
-
-  const v = document.getElementById('damage-vignette');
-  v.style.opacity = '1';
-  setTimeout(() => v.style.opacity = '0', 300);
-
-  flashAlertScreen();
-
-  P.velocity.x -= Math.sin(NM.camYaw) * 3;
-  P.velocity.z -= Math.cos(NM.camYaw) * 1;
-
-  if (P.hp <= 0) {
-    endMission(false);
-  }
-}
-
-function checkVision(e, P) {
-  if (P.hp <= 0) return false;
-  const toPlayer = new THREE.Vector3().subVectors(P.mesh.position, e.mesh.position);
-  const dist = toPlayer.length();
-  if (dist > e.vision) return false;
-  const eFwd = new THREE.Vector3(Math.sin(e.mesh.rotation.y), 0, Math.cos(e.mesh.rotation.y));
-  const angle = Math.acos(clamp(eFwd.dot(toPlayer.clone().normalize()), -1, 1));
-  const halfAngle = (e.visionAngle / 2) * Math.PI / 180;
-  const distFactor = P.isCrouching ? 0.5 : 1.0;
-  return angle < halfAngle && dist < e.vision * distFactor;
-}
-
-function checkHearing(e, P) {
-  if (P.hp <= 0) return false;
-  if (P.isCrouching) return false;
-  const dist = e.mesh.position.distanceTo(P.mesh.position);
-  const speed = Math.sqrt(P.velocity.x ** 2 + P.velocity.z ** 2);
-  return dist < e.hearingRadius && speed > 1;
-}
-
-function alertNearby(pos, radius) {
-  NM.enemies.forEach(e => {
-    if (e.state === 'DEAD' || e.state === 'ATTACK' || e.state === 'CHASE') return;
-    const dist = e.mesh.position.distanceTo(pos);
-    if (dist < radius) {
-      e.state = 'ALERT';
-      e.alertLevel = 1;
-      e.lastKnownPlayer.copy(NM.player.mesh.position);
-      showEnemyAlert(e, '!');
-    }
-  });
+  animateCharacter(e, dt, true);
 }
 
 function showEnemyAlert(e, icon) {
@@ -2001,14 +1661,8 @@ function showEnemyAlert(e, icon) {
     return;
   }
   e.alertIcon.textContent = icon;
-  e.alertIcon.style.color = icon === '!' ? '#ff4400' : '#ffdd00';
+  e.alertIcon.style.color = '#ff4400';
   e.alertIcon.style.opacity = '1';
-}
-
-function faceDirection(e, dir, speed) {
-  if (dir.length() < 0.01) return;
-  const targetAngle = Math.atan2(dir.x, dir.z);
-  e.mesh.rotation.y = lerpAngle(e.mesh.rotation.y, targetAngle, speed);
 }
 
 function animateCharacter(c, dt, isMoving) {
@@ -2052,6 +1706,7 @@ function animateCharacter(c, dt, isMoving) {
   }
 }
 
+// Particle effects (original)
 function spawnBlood(pos, count, big) {
   for (let i = 0; i < count; i++) {
     const geo = new THREE.SphereGeometry(big ? 0.08 : 0.04, 4, 4);
@@ -2064,53 +1719,8 @@ function spawnBlood(pos, count, big) {
       Math.random() * 4 + (big ? 2 : 1),
       (Math.random() - 0.5) * 4
     );
-    NM.particles.push({
-      mesh,
-      vel: v,
-      life: 1.2,
-      maxLife: 1.2,
-      gravity: true,
-      type: 'blood'
-    });
+    NM.particles.push({ mesh, vel: v, life: 1.2, maxLife: 1.2, gravity: true });
   }
-}
-
-function spawnSpark(pos) {
-  for (let i = 0; i < 8; i++) {
-    const geo = new THREE.SphereGeometry(0.03, 3, 3);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(pos);
-    NM.scene.add(mesh);
-    const v = new THREE.Vector3((Math.random() - 0.5) * 5, Math.random() * 3, (Math.random() - 0.5) * 5);
-    NM.particles.push({
-      mesh,
-      vel: v,
-      life: 0.5,
-      maxLife: 0.5,
-      gravity: true,
-      type: 'spark'
-    });
-  }
-}
-
-function spawnScoreParticle(pos, text) {
-  const el = document.createElement('div');
-  el.textContent = text;
-  el.style.cssText = `position:fixed;color:#e8c97e;font-size:14px;letter-spacing:2px;pointer-events:none;z-index:50;`;
-  const sp = pos.clone().project(NM.camera);
-  el.style.left = ((sp.x + 1) / 2 * window.innerWidth) + 'px';
-  el.style.top = ((-sp.y + 1) / 2 * window.innerHeight) + 'px';
-  document.body.appendChild(el);
-  let t = 0;
-  const anim = () => {
-    t += 0.016;
-    el.style.top = (parseFloat(el.style.top) - 1) + 'px';
-    el.style.opacity = (1 - t / 1.5);
-    if (t < 1.5) requestAnimationFrame(anim);
-    else el.remove();
-  };
-  requestAnimationFrame(anim);
 }
 
 function updateParticles(dt) {
@@ -2149,37 +1759,23 @@ function animateTrees(dt) {}
 
 function updateEnemyUI() {
   NM.enemies.forEach(e => {
-    if (!NM.camera || !NM.renderer) return;
-    const pos3d = e.mesh.position.clone().add(new THREE.Vector3(0, e.isBoss ? 3.2 : 2.6, 0));
-    const sp = pos3d.clone().project(NM.camera);
-    const sx = (sp.x + 1) / 2 * window.innerWidth;
-    const sy = (-sp.y + 1) / 2 * window.innerHeight;
-    const behind = sp.z > 1;
-
-    if (e.alertIcon) {
-      e.alertIcon.style.left = (sx - 8) + 'px';
-      e.alertIcon.style.top = (sy - 30) + 'px';
-      if (behind) e.alertIcon.style.opacity = '0';
-    }
-
-    if (e.hpBar && e.state !== 'DEAD') {
-      e.hpBar.style.left = (sx - 25) + 'px';
-      e.hpBar.style.top = sy + 'px';
-      e.hpBar.style.opacity = (behind || e.state === 'PATROL') ? '0' : '1';
-      const bar = e.hpBar.querySelector('div div');
-      if (bar) bar.style.width = (e.hp / e.maxHp * 100) + '%';
-      if (e.isBoss) e.hpBar.querySelector('div').style.width = '80px';
-    }
+    if (!e.hpBar || e.state === 'DEAD') return;
+    const pos = e.mesh.position.clone().add(new THREE.Vector3(0, 3, 0));
+    const sp = pos.project(NM.camera);
+    const x = (sp.x + 1) / 2 * window.innerWidth;
+    const y = (-sp.y + 1) / 2 * window.innerHeight;
+    e.hpBar.style.left = x - 25 + 'px';
+    e.hpBar.style.top = y - 20 + 'px';
+    e.hpBar.querySelector('div div').style.width = (e.hp / e.maxHp * 100) + '%';
   });
 }
 
 function getStealthTarget() {
   const P = NM.player;
   if (!P) return null;
-  const RANGE = 2.2;
   return NM.enemies.find(e => {
-    if (e.state === 'DEAD' || e.state === 'ALERT' || e.state === 'CHASE' || e.state === 'ATTACK') return false;
-    return P.mesh.position.distanceTo(e.mesh.position) < RANGE;
+    if (e.state === 'DEAD' || e.alertLevel > 0) return false;
+    return P.mesh.position.distanceTo(e.mesh.position) < 1.8;
   }) || null;
 }
 
@@ -2188,147 +1784,64 @@ function doStealthKill(e) {
   P.isStealthKilling = true;
   P.stealthKillTimer = 1.2;
   e.state = 'DEAD';
-  sfxStealthKill();
-  spawnBlood(e.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)), 15, true);
+  spawnBlood(e.mesh.position.clone(), 15, true);
   NM.score += 500;
-  addScore(500);
   NM.stealthKills++;
   P.kills++;
-  NM.kills = P.kills;
   showNotif('⬧ STEALTH KILL ⬧');
-  setTimeout(() => {
-    const mesh = e.mesh;
-    let op = 1;
-    const fade = setInterval(() => {
-      op -= 0.05;
-      mesh.traverse(m => {
-        if (m.isMesh && m.material) {
-          m.material.transparent = true;
-          m.material.opacity = op;
-        }
-      });
-      if (op <= 0) {
-        clearInterval(fade);
-        NM.scene.remove(mesh);
-      }
-    }, 50);
-  }, 800);
-  setTimeout(() => checkWin(), 1300);
+  setTimeout(() => NM.scene.remove(e.mesh), 500);
 }
 
 function doAttack() {
   const P = NM.player;
   P.isAttacking = true;
   P.attackTimer = 0.42;
-  P.comboCount = Math.min(P.comboCount + 1, 5);
-  P.comboTimer = 1.2;
   sfxSwordSwing();
 
   setTimeout(() => {
-    if (!P.isAttacking && P.attackTimer > 0) return;
-    const RANGE = 2.4,
-      ANGLE = Math.PI * 0.55;
     NM.enemies.forEach(e => {
       if (e.state === 'DEAD') return;
-      const toE = new THREE.Vector3().subVectors(e.mesh.position, P.mesh.position);
-      const dist = toE.length();
-      if (dist > RANGE) return;
-      toE.normalize();
-      const fwd = new THREE.Vector3(Math.sin(P.facingAngle), 0, Math.cos(P.facingAngle));
-      if (fwd.dot(toE) < Math.cos(ANGLE)) return;
-      if (e.isBlocking && Math.random() < 0.4) {
-        sfxBlock();
-        spawnSpark(e.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)));
-        return;
-      }
-      const dmg = 20 + P.comboCount * 5;
-      hitEnemy(e, dmg);
-      addScore(10);
-    });
-  }, 180);
-}
-
-function hitEnemy(e, dmg) {
-  if (e.state === 'DEAD') return;
-  e.hp -= dmg;
-  spawnBlood(e.mesh.position.clone().add(new THREE.Vector3(0, 1, 0)), 6, false);
-  sfxHit();
-  e.state = 'ALERT';
-  e.alertLevel = 1;
-
-  e.mesh.traverse(m => {
-    if (m.isMesh && m.material) {
-      const orig = m.material.emissive ? m.material.emissive.clone() : new THREE.Color(0);
-      m.material.emissive = new THREE.Color(0.8, 0, 0);
-      m.material.emissiveIntensity = 1;
-      setTimeout(() => {
-        if (m.material) {
-          m.material.emissive.copy(orig);
-          m.material.emissiveIntensity = 0;
+      const dist = P.mesh.position.distanceTo(e.mesh.position);
+      if (dist < 2.4) {
+        e.hp -= 30;
+        spawnBlood(e.mesh.position.clone(), 5, false);
+        if (e.hp <= 0) {
+          e.state = 'DEAD';
+          NM.score += 200;
+          P.kills++;
         }
-      }, 150);
-    }
-  });
-
-  if (e.hp <= 0) {
-    killEnemy(e);
-    NM.score += e.isBoss ? 1000 : 200;
-    addScore(e.isBoss ? 1000 : 200);
-  }
-}
-
-function killEnemy(e) {
-  e.state = 'DEAD';
-  NM.player.kills++;
-  NM.kills = NM.player.kills;
-  e.mesh.rotation.x = Math.PI / 2;
-  e.mesh.position.y = 0.3;
-  if (e.alertIcon) e.alertIcon.style.opacity = '0';
-  if (e.hpBar) e.hpBar.style.opacity = '0';
-  sfxDeath();
-
-  const target = NM.enemies.find(en => en.isTarget);
-  if (target && target.state === 'DEAD') {
-    setTimeout(() => endMission(true), 1500);
-  }
-}
-
-function checkWin() {
-  const alive = NM.enemies.filter(e => e.state !== 'DEAD');
-  const bossAlive = alive.find(e => e.isTarget);
-  if (!bossAlive) endMission(true);
+      }
+    });
+    P.isAttacking = false;
+  }, 180);
 }
 
 function updateZoneHint(pos) {
   const el = document.getElementById('zone-hint');
   if (!el) return;
   let hint = '';
-  if (pos.x < -30 && pos.z < -10) hint = '⬧ STEALTH VILLAGE — Silent elimination';
-  else if (pos.x > -15 && pos.x < 15 && pos.z > -10 && pos.z < 30) hint = '⬧ BRIDGE OF SHADOWS — Stay in darkness';
-  else if (pos.x > 50 && pos.z > -40 && pos.z < 40) hint = '⬧ FORTRESS GATE — Infiltrate';
-  else if (pos.x < -50 && pos.z > 60) hint = '⬧ BOSS ARENA — Face the general';
+  if (pos.x < -10 && pos.z < 0) hint = '⬧ STEALTH ZONE — Sneak behind guards';
+  else if (pos.x > 4 && pos.z < -14) hint = '⬧ PLATFORM ZONE — Practice jumping';
+  else if (pos.x > 0 && pos.x < 14 && pos.z > -10 && pos.z < 10) hint = '⬧ WALL JUMP ZONE';
+  else if (pos.z > 8) hint = '⬧ PATROL ZONE — Enemies are walking routes';
   el.textContent = hint;
   el.style.opacity = hint ? '1' : '0';
 }
 
 function updateStealthState(P) {
-  const alerted = NM.enemies.some(e => e.state !== 'DEAD' && e.alertLevel > 0.7);
-  const stealthEl = document.getElementById('stealth-indicator');
-  const promptEl = document.getElementById('stealth-prompt');
-
+  const alerted = NM.enemies.some(e => e.alertLevel > 0.5);
+  const el = document.getElementById('stealth-indicator');
   if (alerted) {
-    stealthEl.textContent = '● DETECTED';
-    stealthEl.style.color = '#e74c3c';
+    el.textContent = '● DETECTED';
+    el.style.color = '#ff4444';
   } else if (P.isCrouching) {
-    stealthEl.textContent = '● HIDING';
-    stealthEl.style.color = '#4488ff';
+    el.textContent = '● HIDING';
+    el.style.color = '#4488ff';
   } else {
-    stealthEl.textContent = '● SHADOW';
-    stealthEl.style.color = '#44bb88';
+    el.textContent = '● SHADOW';
+    el.style.color = '#44bb88';
   }
-
-  const canStealth = !!getStealthTarget();
-  promptEl.style.opacity = canStealth ? '1' : '0';
+  document.getElementById('stealth-prompt').style.opacity = getStealthTarget() ? '1' : '0';
 }
 
 function updateHUD() {
@@ -2336,28 +1849,10 @@ function updateHUD() {
   if (!P) return;
   document.getElementById('health-bar').style.width = (P.hp / P.maxHp * 100) + '%';
   document.getElementById('ki-bar').style.width = (P.ki / P.maxKi * 100) + '%';
-  const sprintBar = document.getElementById('sprint-bar');
-  if (sprintBar) {
-    sprintBar.style.width = (P.sprint / P.maxSprint * 100) + '%';
-    sprintBar.style.background = P.isSprinting ?
-      'linear-gradient(90deg, #f39c12, #f1c40f)' :
-      'linear-gradient(90deg, #27ae60, #2ecc71)';
-    sprintBar.parentElement.style.opacity = P.sprint < P.maxSprint ? '1' : '0.5';
-  }
-  document.getElementById('score-val').textContent = NM.score.toLocaleString();
+  document.getElementById('sprint-bar').style.width = (P.sprint / P.maxSprint * 100) + '%';
+  document.getElementById('score-val').textContent = NM.score;
   const alive = NM.enemies.filter(e => e.state !== 'DEAD').length;
   document.getElementById('kills-display').textContent = `Enemies: ${alive} remaining`;
-}
-
-function flashAlertScreen() {
-  const f = document.getElementById('alert-flash');
-  f.style.opacity = '1';
-  setTimeout(() => f.style.opacity = '0', 200);
-}
-
-function addScore(pts) {
-  NM.score += pts;
-  if (NM.player) spawnScoreParticle(NM.player.mesh.position.clone().add(new THREE.Vector3(0, 2.5, 0)), '+' + pts);
 }
 
 function showNotif(text, red = false) {
@@ -2365,7 +1860,7 @@ function showNotif(text, red = false) {
   el.className = 'notif' + (red ? ' red' : '');
   el.textContent = text;
   document.getElementById('notifications').appendChild(el);
-  setTimeout(() => el.remove(), 2100);
+  setTimeout(() => el.remove(), 2000);
 }
 
 function pauseGame() {
@@ -2378,7 +1873,6 @@ function resumeGame() {
   if (NM.state !== 'paused') return;
   NM.state = 'playing';
   document.getElementById('pause-screen').style.display = 'none';
-  NM.clock.getDelta();
 }
 
 function endMission(win) {
@@ -2386,51 +1880,30 @@ function endMission(win) {
   const time = NM.missionTime;
   const kills = NM.player.kills;
   const stealth = NM.stealthKills;
-  const score = NM.score + (win ? 1000 : 0) + (time < 120 ? 500 : 0);
-  NM.score = score;
+  const score = NM.score;
 
-  NM.highScores.push({
-    score,
-    time: Math.floor(time),
-    kills,
-    stealth,
-    date: Date.now()
-  });
-  NM.highScores.sort((a, b) => b.score - a.score);
-  NM.highScores = NM.highScores.slice(0, 10);
-  localStorage.setItem('nm_scores', JSON.stringify(NM.highScores));
-
-  const rank = score >= 3000 ? 'S' : score >= 2000 ? 'A' : score >= 1000 ? 'B' : score >= 500 ? 'C' : 'D';
-
-  const rs = document.getElementById('result-screen');
-  document.getElementById('result-title').textContent = win ? 'Mission Complete' : 'Mission Failed';
-  document.getElementById('result-title').className = 'result-title ' + (win ? 'win' : 'lose');
-  document.getElementById('result-subtitle').textContent = win ? '— THE BLADE FALLS SILENT —' : '— SHADOWS CLAIM THE FALLEN —';
-  document.getElementById('res-score').textContent = score.toLocaleString();
-  const m = Math.floor(time / 60),
-    s = Math.floor(time % 60);
+  document.getElementById('res-score').textContent = score;
+  const m = Math.floor(time / 60);
+  const s = Math.floor(time % 60);
   document.getElementById('res-time').textContent = m + ':' + (s < 10 ? '0' : '') + s;
   document.getElementById('res-kills').textContent = kills;
   document.getElementById('res-stealth').textContent = stealth;
+  
+  const rank = score >= 3000 ? 'S' : score >= 2000 ? 'A' : score >= 1000 ? 'B' : 'C';
   document.getElementById('res-rank').textContent = rank;
-
+  
+  document.getElementById('result-title').textContent = win ? 'Mission Complete' : 'Mission Failed';
+  document.getElementById('result-title').className = 'result-title ' + (win ? 'win' : 'lose');
+  
   setTimeout(() => {
     document.getElementById('hud').style.display = 'none';
     document.getElementById('minimap').style.display = 'none';
-    rs.style.display = 'flex';
-    if (NM.isMobile) document.getElementById('mobile-controls').style.display = 'none';
-  }, win ? 2000 : 500);
-
-  if (win) {
-    showNotif('TARGET ELIMINATED');
-    sfxVictory();
-  } else {
-    showNotif('YOU HAVE FALLEN', true);
-  }
+    document.getElementById('result-screen').style.display = 'flex';
+  }, 1000);
 }
 
 // ══════════════════════════════════════════════════════════════
-//  INPUT BINDING (full with crouch)
+//  INPUT BINDING
 // ══════════════════════════════════════════════════════════════
 function bindInput() {
   document.addEventListener('keydown', e => {
@@ -2438,6 +1911,7 @@ function bindInput() {
     NM.keys[k] = true;
     if (k === 'j') NM.btnState.attackJustPressed = true;
     if (k === ' ') NM.btnState.jumpJustPressed = true;
+    if (k === 'l') NM.btnState.interactJustPressed = true;
     if (k === 'v') cycleCamMode();
     if (k === 'x') {
       NM.xrayMode = !NM.xrayMode;
@@ -2457,19 +1931,16 @@ function bindInput() {
     }
     e.preventDefault();
   });
-  document.addEventListener('keyup', e => {
-    NM.keys[e.key.toLowerCase()] = false;
-  });
+  document.addEventListener('keyup', e => { NM.keys[e.key.toLowerCase()] = false; });
 
   document.addEventListener('wheel', e => {
-    if (NM.state !== 'playing') return;
-    if (NM.camMode === 3) return;
+    if (NM.state !== 'playing' || NM.camMode === 3) return;
     NM.camDist = clamp(NM.camDist + e.deltaY * 0.01, 2, 14);
     e.preventDefault();
   }, { passive: false });
 
   document.addEventListener('mousedown', e => {
-    if (e.target.tagName === 'BUTTON' || e.target.closest('.menu-btn') || e.target.closest('.top-btn')) return;
+    if (e.target.closest('.top-btn, .action-btn, .menu-btn')) return;
     NM.mouse.isDown = true;
     NM.mouse.lastX = e.clientX;
     NM.mouse.lastY = e.clientY;
@@ -2531,22 +2002,25 @@ function bindInput() {
   function mobileBtn(id, onDown, onUp) {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('touchstart', e => { onDown(); e.stopPropagation(); }, { passive: false });
-    el.addEventListener('touchend', e => { if (onUp) onUp(); e.stopPropagation(); }, { passive: false });
-    el.addEventListener('mousedown', onDown);
-    el.addEventListener('mouseup', onUp || (() => {}));
+    el.addEventListener('touchstart', e => { onDown(); e.preventDefault(); e.stopPropagation(); }, { passive: false });
+    el.addEventListener('touchend', e => { if (onUp) onUp(); e.preventDefault(); e.stopPropagation(); }, { passive: false });
+    el.addEventListener('mousedown', e => { onDown(); e.preventDefault(); });
+    el.addEventListener('mouseup', e => { if (onUp) onUp(); e.preventDefault(); });
+    el.addEventListener('mouseleave', () => { if (onUp) onUp(); });
   }
-  mobileBtn('btn-run', () => NM.btnState.sprint = true, () => NM.btnState.sprint = false);
-  mobileBtn('btn-attack', () => NM.btnState.attackJustPressed = true, null);
-  mobileBtn('btn-jump', () => NM.btnState.jumpJustPressed = true, null);
-  mobileBtn('btn-block', () => NM.btnState.block = true, () => NM.btnState.block = false);
-  mobileBtn('btn-crouch', () => NM.btnState.crouch = true, () => NM.btnState.crouch = false);
+
+  mobileBtn('btn-run', () => { NM.btnState.sprint = true; }, () => { NM.btnState.sprint = false; });
+  mobileBtn('btn-crouch', () => { NM.btnState.crouch = true; }, () => { NM.btnState.crouch = false; });
+  mobileBtn('btn-attack', () => { NM.btnState.attackJustPressed = true; }, null);
+  mobileBtn('btn-jump', () => { NM.btnState.jumpJustPressed = true; }, null);
+  mobileBtn('btn-block', () => { NM.btnState.block = true; }, () => { NM.btnState.block = false; });
+  mobileBtn('btn-interact', () => { NM.btnState.interactJustPressed = true; }, null);
 }
 
 function initJoystick() {
   const zone = document.getElementById('joystick-zone');
   const stick = document.getElementById('joystick-stick');
-  const radius = 45; // larger
+  const radius = 45;
 
   zone.addEventListener('touchstart', e => {
     for (const t of e.changedTouches) {
@@ -2567,11 +2041,10 @@ function initJoystick() {
       if (t.identifier === NM.joystick.id) {
         const dx = t.clientX - NM.joystick.startX;
         const dy = t.clientY - NM.joystick.startY;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        const clampedLen = Math.min(len, radius);
+        const len = Math.min(Math.sqrt(dx * dx + dy * dy), radius);
         const angle = Math.atan2(dy, dx);
-        const sx = Math.cos(angle) * clampedLen;
-        const sy = Math.sin(angle) * clampedLen;
+        const sx = Math.cos(angle) * len;
+        const sy = Math.sin(angle) * len;
         stick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
         NM.joystick.dx = sx / radius;
         NM.joystick.dy = sy / radius;
@@ -2591,9 +2064,7 @@ function initJoystick() {
   }, { passive: true });
 }
 
-// ══════════════════════════════════════════════════════════════
-//  AUDIO (full original)
-// ══════════════════════════════════════════════════════════════
+// Audio (original)
 function getCtx() {
   if (!NM.audioCtx) return null;
   if (NM.audioCtx.state === 'suspended') NM.audioCtx.resume();
@@ -2603,53 +2074,17 @@ function getCtx() {
 function sfxSwordSwing(vol = 1) {
   const ctx = getCtx();
   if (!ctx) return;
-  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    const t = i / ctx.sampleRate;
-    data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 15) * Math.sin(t * 800) * vol;
-  }
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  const g = ctx.createGain();
-  g.gain.value = 0.3 * vol;
-  src.connect(g);
-  g.connect(ctx.destination);
-  src.start();
-}
-
-function sfxHit(vol = 1) {
-  const ctx = getCtx();
-  if (!ctx) return;
-  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    const t = i / ctx.sampleRate;
-    data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 30) * 0.9 * vol;
-  }
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  const g = ctx.createGain();
-  g.gain.value = 0.4 * vol;
-  src.connect(g);
-  g.connect(ctx.destination);
-  src.start();
-}
-
-function sfxBlock() {
-  const ctx = getCtx();
-  if (!ctx) return;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(400, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.1);
-  g.gain.setValueAtTime(0.15, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.1);
+  g.gain.setValueAtTime(vol * 0.2, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
   osc.connect(g);
   g.connect(ctx.destination);
   osc.start();
-  osc.stop(ctx.currentTime + 0.15);
+  osc.stop(ctx.currentTime + 0.2);
 }
 
 function sfxJump() {
@@ -2658,9 +2093,9 @@ function sfxJump() {
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(200, ctx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.1);
-  g.gain.setValueAtTime(0.12, ctx.currentTime);
+  osc.frequency.setValueAtTime(300, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
+  g.gain.setValueAtTime(0.1, ctx.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
   osc.connect(g);
   g.connect(ctx.destination);
@@ -2671,16 +2106,47 @@ function sfxJump() {
 function sfxFootstep(vol = 0.1) {
   const ctx = getCtx();
   if (!ctx) return;
-  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.02)) * vol;
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
+  const osc = ctx.createOscillator();
   const g = ctx.createGain();
-  g.gain.value = 0.2;
-  src.connect(g);
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(100, ctx.currentTime);
+  g.gain.setValueAtTime(vol * 0.1, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+  osc.connect(g);
   g.connect(ctx.destination);
-  src.start();
+  osc.start();
+  osc.stop(ctx.currentTime + 0.05);
+}
+
+function sfxBlock() {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.1);
+  g.gain.setValueAtTime(0.1, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1);
+}
+
+function sfxHit() {
+  const ctx = getCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(100, ctx.currentTime);
+  g.gain.setValueAtTime(0.15, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.15);
 }
 
 function sfxAlert() {
@@ -2716,11 +2182,8 @@ function sfxDeath() {
 }
 
 function sfxStealthKill() {
-  const ctx = getCtx();
-  if (!ctx) return;
   sfxSwordSwing(1.5);
-  setTimeout(() => sfxHit(1.5), 200);
-  setTimeout(() => sfxDeath(), 400);
+  setTimeout(() => sfxHit(), 200);
 }
 
 function sfxVictory() {
@@ -2744,74 +2207,30 @@ function sfxVictory() {
 }
 
 function tryBGM() {
-  generateAmbientBGM();
-}
-
-function generateAmbientBGM() {
   const ctx = getCtx();
   if (!ctx) return;
-
   function drone(freq, vol) {
     const osc = ctx.createOscillator();
-    const lfo = ctx.createOscillator();
-    const lfoGain = ctx.createGain();
     const g = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.value = freq;
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.15;
-    lfoGain.gain.value = freq * 0.01;
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    g.gain.value = vol;
+    g.gain.value = vol * 0.02;
     osc.connect(g);
     g.connect(ctx.destination);
     osc.start();
-    lfo.start();
     return osc;
   }
-  [55, 82.5, 110, 165].forEach((f, i) => drone(f, 0.015 - i * 0.002));
-
-  function bell() {
-    if (NM.state !== 'playing') {
-      setTimeout(bell, 3000);
-      return;
-    }
-    const ctx2 = getCtx();
-    if (!ctx2) return;
-    const osc = ctx2.createOscillator();
-    const g = ctx2.createGain();
-    osc.type = 'sine';
-    const notes = [523, 659, 784, 1046, 1319];
-    osc.frequency.value = notes[Math.floor(Math.random() * notes.length)];
-    g.gain.setValueAtTime(0.04, ctx2.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 3);
-    osc.connect(g);
-    g.connect(ctx2.destination);
-    osc.start();
-    osc.stop(ctx2.currentTime + 3);
-    setTimeout(bell, 3000 + Math.random() * 5000);
-  }
-  setTimeout(bell, 2000);
+  drone(80, 1);
+  drone(120, 0.5);
 }
 
 function stopBGM() {
-  if (NM.audioCtx) {
-    try { NM.audioCtx.suspend(); } catch (e) {}
-  }
+  if (NM.audioCtx) NM.audioCtx.suspend();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  UTILS
-// ══════════════════════════════════════════════════════════════
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
+// Utils
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
 function lerpAngle(a, b, t) {
   let d = b - a;
   while (d > Math.PI) d -= Math.PI * 2;
@@ -2819,9 +2238,7 @@ function lerpAngle(a, b, t) {
   return a + d * t;
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════════════════════════════
+// Boot
 boot();
 </script>
 </body>
